@@ -6,11 +6,6 @@ The premise is to identify mathematical expressions from photos, parse it, and i
 
 # Sample inputs
 Here some examples of expected program inputs.
-![Sample Input 1](/sample-inputs/sample-1.png)
-Format: ![Alt Text](Input sample 1)
-
-![Sample Input 2](/sample-inputs/sample-2.png)
-Format: ![Alt Text](Input sample 2)
-
-![Sample Input 3](/sample-inputs/sample-3.png)
-Format: ![Alt Text](Input sample 3)
+![Sample Input 1](/sample-inputs/sample-1.jpg)
+![Sample Input 2](/sample-inputs/sample-2.jpg)
+![Sample Input 3](/sample-inputs/sample-3.jpg)
