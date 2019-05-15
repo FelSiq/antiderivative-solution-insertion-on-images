@@ -2,7 +2,7 @@
 Detection and solution of mathematical expressions in photos using image processing techniques.
 
 # Abstract
-The premise is to identify mathematical expressions from photos, parse it, and insert its solution inside the image (preferably at the end of the detected mathematical expression.) I'll just focus in supporting just some mathematical operations (mostly arithmetic), and also leave the mathematical solution to Wolfram Alpha. My focus is on the detection of the mathematical expression itself and the recognition of its digits/operators in the correct order.
+The premise is to identify antiderivatives (because proper integrals seems to be harder) from photos, parse it, and insert its solution inside the image (preferably at the end of the detected object.) I'll just focus in supporting just some mathematical operations (mostly arithmetic) and, of course, also leave the mathematical solution to Wolfram Alpha. My focus is on the detection of the antiderivatives itself and the recognition of its operations in the correct order.
 
 # Sample inputs
 Here some examples of expected program inputs.
