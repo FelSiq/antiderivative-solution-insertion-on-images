@@ -42,7 +42,7 @@ def read_class_data(class_path: str, inst_names: t.Iterable[str],
 
 def preprocess() -> None:
     """Preprocess all training images."""
-    file_tree = os.walk(dataset_path)
+    file_tree = os.walk(INPUT_PATH)
     file_tree.__next__()
 
     for dirpath, _, filenames in file_tree:
