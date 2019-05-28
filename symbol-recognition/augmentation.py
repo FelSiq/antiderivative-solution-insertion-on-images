@@ -29,12 +29,14 @@ def gen_variants(image: np.ndarray,
     return variants
 
 
-def write_variants(variants: t.Sequence[np.ndarray], class_name: str,
+def write_variants(variants: t.Sequence[np.ndarray],
+                   class_filepath: str,
+                   class_name: str,
                    start_var_ind: int) -> None:
     """Write image variants into output files."""
     for var_ind, var_img in enumerate(variants, start_var_ind):
         cur_var_filename = "_".join((class_name, str(var_ind)))
-        cur_var_filepath = os.path.join(OUTPUT_PATH, cur_var_filename)
+        cur_var_filepath = os.path.join(class_filepath, cur_var_filename)
 
         imageio.imwrite(
             uri=".".join((cur_var_filepath, OUTPUT_FILE_TYPE)),
@@ -47,12 +49,17 @@ def read_class_data(class_path: str, inst_names: t.Iterable[str],
     """Get image dataset from given ``filepath``."""
     CLASS_NAME = RE_CLASS_NAME.search(class_path).group()
     START_VAR_IND = len(inst_names)
+    CLASS_FILEPATH = os.path.joint(OUTPUT_PATH, "_".join(("class", class_name)))
+
+    if not os.path.exists(CLASS_FILEPATH):
+        os.makedirs(CLASS_FILEPATH)
 
     for inst_name in inst_names:
         cur_inst = imageio.imread(os.path.join(class_path, inst_name))
         cur_vars = gen_variants(image=cur_inst, random_seed=random_seed)
         write_variants(
             variants=cur_vars,
+            class_filepath=CLASS_FILEPATH,
             class_name=CLASS_NAME,
             start_var_ind=START_VAR_IND)
 
