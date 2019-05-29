@@ -2,3 +2,4 @@ keras
 imageio
 numpy
 scikit-image
+tensorflow
