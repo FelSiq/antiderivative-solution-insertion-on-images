@@ -48,26 +48,33 @@ def read_class_data(class_path: str, inst_names: t.Iterable[str],
                     random_seed: int) -> np.ndarray:
     """Get image dataset from given ``filepath``."""
     CLASS_NAME = RE_CLASS_NAME.search(class_path).group()
-    START_VAR_IND = len(inst_names)
-    CLASS_FILEPATH = os.path.joint(OUTPUT_PATH, "_".join(("class", class_name)))
+    CLASS_FILEPATH = os.path.join(OUTPUT_PATH, "_".join(("class", CLASS_NAME)))
 
     if not os.path.exists(CLASS_FILEPATH):
         os.makedirs(CLASS_FILEPATH)
 
+    start_var_ind = len(inst_names)
+
     for inst_name in inst_names:
         cur_inst = imageio.imread(os.path.join(class_path, inst_name))
         cur_vars = gen_variants(image=cur_inst, random_seed=random_seed)
+
         write_variants(
             variants=cur_vars,
             class_filepath=CLASS_FILEPATH,
             class_name=CLASS_NAME,
-            start_var_ind=START_VAR_IND)
+            start_var_ind=start_var_ind)
+
+        start_var_ind += len(cur_vars)
 
 
 def augment_data(dataset_path: str, random_seed: int) -> None:
     """Augment data class by class."""
     file_tree = os.walk(dataset_path)
     file_tree.__next__()
+
+    if not os.path.exists(OUTPUT_PATH):
+        os.makedirs(OUTPUT_PATH)
 
     for dirpath, _, filenames in file_tree:
         read_class_data(
