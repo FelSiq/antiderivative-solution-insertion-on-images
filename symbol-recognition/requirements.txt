@@ -1,4 +1,4 @@
 keras
 imageio
 numpy
-skimage
+scikit-image
