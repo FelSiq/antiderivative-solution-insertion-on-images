@@ -23,19 +23,33 @@ Here some examples of expected program inputs.
 # Partial report
 Here is summarized all work done until now.
 
+## Planned workflow
+![Planned workflow here](/planned-workflow.png)
+
+The planned workflow is divided mainly in two parts:
+* Symbol recognition with Convolutional Neural Network (CNN)
+    1. Data must be generated and preprocessed
+    2. CNN architecture must be created
+    3. Model must be trained
+* Antiderivative recognition and insertion in-place
+    1. Input must be preprocessed and segmented
+    2. Objects must be detected and parsed
+    3. Object recognition (uses the previous descibred part) and expression generation
+    4. Solve the expression and insertion in-place
+
 ## Current progress
-* The structure to generate the train data for object recognition is ready (see [symbol recognition]("/symbol-recognition")) directory.
+* The structure to generate the train data for object recognition is ready (see [symbol recognition](/symbol-recognition)) directory.
     1. It was created from 10 32x32 handwritten symbols.
     2. After that data augmentation is used for each handwritten symbol to generate 10 extra variants using random rotation, shifts and zoom in/out within predefined intervals.
     3. Then, this data is preprocessed using threshold to binarize each image.
-* Preprocessing of input images is ready (see [preprocess module]("/antideriv/preprocess.py") module). Various alternatives were tested, and currently I'm using the following steps:
+* Preprocessing of input images is ready (see [preprocess module](/antideriv/preprocess.py) module). Various alternatives were tested, and currently I'm using the following steps:
     1. RGB to grayscale
     2. It applies Sobel filter for border detection 
     3. Then, the Otsu threshold is applied to segment the input image.
-* Connection with Wolfram Alpha is ready.
+* Connection with Wolfram Alpha is ready and working.
 
 ## To-do
 - Detect the coordinates of each segmented object
 - Create the CNN architecture
-    - Also, train CNN model
-- Preprocess solution image and insert inside the input image
+    - Also, train the CNN model
+- Preprocess solution image and insert it inside the input image
