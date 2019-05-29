@@ -24,6 +24,8 @@ def preprocess_img(img: np.ndarray) -> np.ndarray:
     """Transform image to grayscale and apply mean threshold."""
     res_img = skimage.color.rgb2gray(img)
     res_img = mean_threshold(res_img)
+    res_img = skimage.transform.resize(res_img, (32, 32), preserve_range=True)
+
     return res_img
 
 
