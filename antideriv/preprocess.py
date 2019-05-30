@@ -25,7 +25,16 @@ class Preprocessor:
         """
         self.img_preprocessed = None  # type: t.Optional[np.ndarray]
 
-    def preprocess(self, img: np.ndarray, plot: bool = False) -> np.ndarray:
+    def border_crop(self, img: np.ndarray) -> np.ndarray:
+        """Crop empty preprocessed image border."""
+        coords = np.argwhere(img > 0)
+
+        x_min, y_min = coords.min(axis=0)
+        x_max, y_max = coords.max(axis=0) + 1
+
+        return img[x_min:x_max, y_min:y_max]
+
+    def preprocess(self, img: np.ndarray, plot: bool = True) -> np.ndarray:
         """Preprocess the input image.
 
         The procedures applied to the image are:
@@ -43,6 +52,8 @@ class Preprocessor:
 
         threshold = skimage.filters.threshold_otsu(self.img_preprocessed)
         self.img_preprocessed = 255 * (self.img_preprocessed > threshold)
+
+        self.img_preprocessed = self.border_crop(self.img_preprocessed)
 
         if plot:
             plt.subplot(122)
