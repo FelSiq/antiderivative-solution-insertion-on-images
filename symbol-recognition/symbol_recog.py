@@ -1,14 +1,16 @@
 """Module dedicated to train the CNN model to object recognition."""
 import typing as t
 import inspect
+import os
+import re
 
 import numpy as np
 import tensorflow
+import skimage
 from keras.layers import Dropout, Dense, Conv2D, MaxPooling2D, Flatten
 import keras.models
 import keras.utils
 import sklearn.model_selection
-import sklearn.datasets
 import sklearn.preprocessing
 
 
@@ -18,7 +20,8 @@ class CNNModel:
 
         self.random_seed = random_seed
         self.architecture_id = None
-        self.num_classes = num_classes
+
+        self.num_classes = np.unique(y).size
 
         aux = tuple(
             mtd_item for mtd_item in inspect.getmembers(
@@ -29,11 +32,13 @@ class CNNModel:
 
     def architecture_1(self):
         """Predefined CNN architecture 01."""
-        self.model.add(Conv2D(filters=16, kernel_size=4))
+        self.model.add(Conv2D(filters=32, kernel_size=3, activation="relu"))
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(Conv2D(filters=64, kernel_size=3, activation="relu"))
+        self.model.add(Dropout(0.2, seed=self.random_seed))
 
         self.model.add(Flatten())
-        self.model.add(Dense(units=32, activation="relu"))
+        self.model.add(Dense(units=128, activation="relu"))
         self.model.add(Dropout(0.2, seed=self.random_seed))
         self.model.add(Dense(units=self.num_classes, activation="softmax"))
 
@@ -76,6 +81,7 @@ class CNNModel:
             batch_size: int,
     ) -> t.Union[t.Sequence[float], float]:
         """Perform an experiment with the selected CNN architecture."""
+
         kfold = sklearn.model_selection.StratifiedKFold(
             n_splits=n_splits, shuffle=True, random_state=self.random_seed)
 
@@ -85,8 +91,8 @@ class CNNModel:
             X_train, y_train = X[ind_train, :], y[ind_train]
             X_test, y_test = X[ind_test, :], y[ind_test]
 
-            y_train = keras.utils.to_categorical(y_train)
-            y_test = keras.utils.to_categorical(y_test)
+            y_train = keras.utils.to_categorical(y_train, self.num_classes)
+            y_test = keras.utils.to_categorical(y_test, self.num_classes)
 
             self.model.fit(
                 x=X_train,
@@ -107,23 +113,38 @@ class CNNModel:
 
 def get_data(filepath: str) -> t.Tuple[np.ndarray, np.ndarray]:
     """Return X and y from ``filepath``."""
-    X, y = None, None
+    X, y = [], []
 
-    iris = sklearn.datasets.load_iris()
-    X = iris.data
-    y = iris.target
+    classes_dir = os.walk(filepath)
+    classes_dir.__next__()
 
-    return X, y
+    re_class_name = re.compile(r"(?<=class_)[^\s]+")
+
+    for root, _, files in sorted(classes_dir):
+        class_name = re_class_name.search(root).group()
+        new_insts = []
+
+        for filename in sorted(files):
+            new_insts.append(skimage.io.imread(os.path.join(root, filename)))
+
+        X += new_insts
+        y += len(new_insts) * [class_name]
+
+    X, y = np.array(X) // 255, np.array(y)
+
+    return X.reshape(*X.shape, 1), y
 
 
 if __name__ == "__main__":
-    model = CNNModel(random_seed=1234, num_classes=3)
+    X, y = get_data("./data-augmented-preprocessed")
 
-    X, y = get_data("iris-test")
+    y = sklearn.preprocessing.LabelEncoder().fit_transform(y)
+
+    model = CNNModel(random_seed=1234, num_classes=np.unique(y).size)
 
     results = {}
 
-    for architecture_id in [2]:
+    for architecture_id in [1]:
         model.init_architecture(
             architecture_id=architecture_id,
             loss="categorical_crossentropy",
@@ -135,8 +156,8 @@ if __name__ == "__main__":
             y=y,
             n_splits=10,
             validation_split=0.15,
-            epochs=5,
-            batch_size=16)
+            epochs=12,
+            batch_size=32)
 
         results[architecture_id] = cur_score
 
