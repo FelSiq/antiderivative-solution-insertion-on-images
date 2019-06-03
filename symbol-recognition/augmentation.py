@@ -59,6 +59,9 @@ def read_class_data(class_path: str, inst_names: t.Iterable[str],
         cur_inst = imageio.imread(os.path.join(class_path, inst_name))
         cur_vars = gen_variants(image=cur_inst, random_seed=random_seed)
 
+        # Rewrite also the original instance
+        cur_vars.append(cur_inst)
+
         write_variants(
             variants=cur_vars,
             class_filepath=CLASS_FILEPATH,
