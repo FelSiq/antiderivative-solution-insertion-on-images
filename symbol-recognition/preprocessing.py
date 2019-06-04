@@ -63,7 +63,7 @@ def preprocess() -> None:
     file_tree.__next__()
 
     if not os.path.exists(OUTPUT_PATH):
-                os.makedirs(OUTPUT_PATH)
+        os.makedirs(OUTPUT_PATH)
 
     for dirpath, _, filenames in file_tree:
         read_class_data(
