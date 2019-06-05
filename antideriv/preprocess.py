@@ -34,7 +34,7 @@ class Preprocessor:
 
         return img[x_min:x_max, y_min:y_max]
 
-    def preprocess(self, img: np.ndarray, plot: bool = True) -> np.ndarray:
+    def preprocess(self, img: np.ndarray, plot: bool = False) -> np.ndarray:
         """Preprocess the input image.
 
         The procedures applied to the image are:
