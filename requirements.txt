@@ -1,3 +1,6 @@
 numpy
 scikit-image
 wolframalpha
+scipy
+keras
+tensorflow
