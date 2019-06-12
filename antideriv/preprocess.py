@@ -45,7 +45,10 @@ class Preprocessor:
 
         return img[x_min:x_max, y_min:y_max]
 
-    def preprocess(self, img: np.ndarray, plot: bool = True) -> np.ndarray:
+    def preprocess(self,
+                   img: np.ndarray,
+                   plot: bool = False,
+                   output_file: t.Optional[str] = None) -> np.ndarray:
         """Preprocess the input image.
 
         The procedures applied to the image are:
@@ -88,5 +91,8 @@ class Preprocessor:
             plt.subplot(122)
             plt.imshow(self.img_preprocessed, cmap="gray", vmin=0, vmax=1)
             plt.show()
+
+        if output_file:
+            plt.imsave(output_file, self.img_preprocessed, cmap="gray")
 
         return self.img_preprocessed

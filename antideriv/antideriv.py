@@ -86,9 +86,12 @@ class Antideriv:
 
         return segments
 
-    def fit(self, img: np.ndarray) -> "Antideriv":
+    def fit(self, img: np.ndarray, output_file: t.Optional[str] = None) -> "Antideriv":
         """Fit an input image into the model."""
-        self.img_input = self._preprocessor.preprocess(img.copy())
+        self.img_input = self._preprocessor.preprocess(
+            img.copy(),
+            output_file=output_file)
+
         self.img_segments = self._segment_img()
 
         return self
@@ -158,6 +161,6 @@ if __name__ == "__main__":
 
     input_img = imageio.imread(image_path)
 
-    model = Antideriv().fit(input_img)
-    img, ans = model.solve(return_text=True)
-    print(ans)
+    model = Antideriv().fit(input_img, output_file="../preprocessed.jpg")
+    # img, ans = model.solve(return_text=True)
+    # print(ans)
