@@ -26,15 +26,13 @@ class Preprocessor:
         """
         self.img_preprocessed = None  # type: t.Optional[np.ndarray]
 
-        self._opening_mask_1 = (
-            scipy.ndimage.morphology.iterate_structure(
-                scipy.ndimage.morphology.generate_binary_structure(2, 1),
-                iterations=1))
+        self._opening_mask_1 = (scipy.ndimage.morphology.iterate_structure(
+            scipy.ndimage.morphology.generate_binary_structure(2, 1),
+            iterations=1))
 
-        self._opening_mask_2 = (
-            scipy.ndimage.morphology.iterate_structure(
-                scipy.ndimage.morphology.generate_binary_structure(2, 2),
-                iterations=3))
+        self._opening_mask_2 = (scipy.ndimage.morphology.iterate_structure(
+            scipy.ndimage.morphology.generate_binary_structure(2, 2),
+            iterations=3))
 
     def border_crop(self, img: np.ndarray) -> np.ndarray:
         """Crop empty preprocessed image border."""
@@ -68,10 +66,8 @@ class Preprocessor:
         threshold = skimage.filters.threshold_otsu(self.img_preprocessed)
         self.img_preprocessed = self.img_preprocessed > threshold
 
-        self.img_preprocessed = (
-            scipy.ndimage.morphology.binary_closing(
-                self.img_preprocessed,
-                structure=self._opening_mask_2))
+        self.img_preprocessed = (scipy.ndimage.morphology.binary_closing(
+            self.img_preprocessed, structure=self._opening_mask_2))
 
         self.img_preprocessed = self.border_crop(self.img_preprocessed)
 
@@ -80,8 +76,10 @@ class Preprocessor:
 
         while np.any(prev_size > (cur_size * 1.1)):
             for _ in np.arange(2):
-                aux = skimage.filters.rank.median(self.img_preprocessed, np.ones((11, 11)))
-                self.img_preprocessed[np.logical_and(self.img_preprocessed > 0, aux < 1)] = 0
+                aux = skimage.filters.rank.median(self.img_preprocessed,
+                                                  np.ones((11, 11)))
+                self.img_preprocessed[np.logical_and(self.img_preprocessed > 0,
+                                                     aux < 1)] = 0
                 self.img_preprocessed = self.border_crop(self.img_preprocessed)
 
             prev_size = cur_size
@@ -95,4 +93,4 @@ class Preprocessor:
         if output_file:
             plt.imsave(output_file, self.img_preprocessed, cmap="gray")
 
-        return self.img_preprocessed
+        return self.img_preprocessed.astype(np.uint8)
