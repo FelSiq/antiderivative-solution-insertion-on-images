@@ -14,11 +14,11 @@ The premise is to identify antiderivatives (because proper integrals seems to be
 
 # Sample inputs
 Here some examples of expected program inputs.
-![Sample Input 4](/sample-inputs/sample-4.jpg){:height="50%" width="50%"}
-![Sample Input 5](/sample-inputs/sample-5.jpg){:height="50%" width="50%"}
-![Sample Input 1](/sample-inputs/sample-1.jpg){:height="50%" width="50%"}
-![Sample Input 2](/sample-inputs/sample-2.jpg){:height="50%" width="50%"}
-![Sample Input 3](/sample-inputs/sample-3.jpg){:height="50%" width="50%"}
+![Sample Input 4](/sample-inputs/sample-4.jpg)
+![Sample Input 5](/sample-inputs/sample-5.jpg)
+![Sample Input 1](/sample-inputs/sample-1.jpg)
+![Sample Input 2](/sample-inputs/sample-2.jpg)
+![Sample Input 3](/sample-inputs/sample-3.jpg)
 
 # Partial report
 Here is summarized all work done until now.
