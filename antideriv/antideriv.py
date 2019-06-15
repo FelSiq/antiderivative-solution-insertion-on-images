@@ -6,6 +6,7 @@ import io
 import numpy as np
 import wolframalpha
 import imageio
+import skimage.transform
 import keras
 
 import preprocess
@@ -64,33 +65,114 @@ class Antideriv:
             "8",
         )
 
-    def _segment_img(self) -> t.Sequence[np.ndarray]:
-        """Segment the input image into preprocessed units."""
-        segments = []
+    def _paint_object(self,
+                      img: np.ndarray,
+                      start_coord: t.Tuple[int, int]
+                      ) -> t.Tuple[int, int, int, int]:
+        """Paint object under the ``star_coord`` in the input image.
 
-        aux = "../symbol-recognition/data-augmented-preprocessed/class_"
-        segments.append(imageio.imread("".join((aux, "18/18_40.png"))))
-        segments.append(imageio.imread("".join((aux, "3/3_40.png"))))
-        segments.append(imageio.imread("".join((aux, "11/11_40.png"))))
-        segments.append(imageio.imread("".join((aux, "13/13_40.png"))))
-        segments.append(imageio.imread("".join((aux, "7/7_40.png"))))
-        segments.append(imageio.imread("".join((aux, "11/11_40.png"))))
+        Arguments
+        ---------
+        img : :obj:`np.ndarray`
+            Image to paint in-place.
+
+        start_coord : :obj:`tuple` with two :obj:`int`
+            A tuple containing the starting coordinates, x and y, of
+            some previously segmented object.
+
+        Returns
+        -------
+        :obj:`tuple` with four :obj:`int`
+            Tuple containing four integers relative to, respectively,
+            ``x_min``, ``x_max``, ``y_min`` and ``y_max``.
+
+        Notes
+        -----
+            * It is assumed that the value 1 representes the object. All
+            other ``colors`` (values) will be considered as the object
+            boundaries.
+
+            * The reference image is the ``_img_painted`` attribute, not
+            the ``img_input``.
         """
-            Necessary steps:
-            - Cut image into separated pieces
-            - Resize to 32x32 images
-        """
+
+    def _get_size_threshold(self, sizes: np.ndarray, whis: np.number = 1.50
+                            ) -> t.Tuple[np.number, np.number]:
+        """."""
+        _q25, _q75, threshold_val = sizes.percentile((25, 75, 50))
+        iqr_whis = whis * (_q75 - _q25)
+        return threshold_val, iqr_whis
+
+    def _get_obj_coords(
+            self, whis: np.number = 1.50
+    ) -> t.Tuple[np.ndarray, t.Tuple[np.number, np.number]]:
+        """."""
+        if self.img_input is None:
+            raise TypeError("'img_input' attribute is None.")
+
+        obj_coords = []
+        sizes = []
+
+        img_painted = self.img_input.copy()
+
+        for i, j in np.ndindex(self.img_input.shape):
+            if img_painted[i, j] == 1:
+                obj_coord = self._paint_object(img_painted, start_coord=(i, j))
+                obj_coords.append(obj_coord)
+
+                x_min, x_max, y_min, y_max = obj_coord
+                sizes.append((1 + x_max - x_min) * (1 + y_max - y_min))
+
+        threshold_info = self._get_size_threshold(np.array(sizes), whis=whis)
+
+        return np.array(obj_coords), threshold_info
+
+    def _segment_img(self, whis: np.number = 1.50) -> t.Sequence[np.ndarray]:
+        """Segment the input image into preprocessed units."""
+        if self.img_input is None:
+            raise TypeError("'img_input' attribute is None.")
+
+        segments = []  # type: t.Union[t.List[np.ndarray], np.ndarray]
+
+        obj_coords, threshold_info = self._get_obj_coords(whis=whis)
+
+        threshold_val, iqr_whis = threshold_info
+
+        for obj_coord in obj_coords:
+            x_min, x_max, y_min, y_max = obj_coord
+
+            obj = self.img_input[x_min:(x_max + 1), y_min:(y_max + 1)]
+
+            if np.abs(obj.size - threshold_val) <= iqr_whis:
+                obj = skimage.transform.resize(obj, output_shape=(32, 32))
+                segments.append(obj)
 
         segments = np.array(segments)
-        segments = segments.reshape(*segments.shape, 1) // 255
+        segments = segments.reshape(*segments.shape, 1)
 
         return segments
 
-    def fit(self, img: np.ndarray, output_file: t.Optional[str] = None) -> "Antideriv":
-        """Fit an input image into the model."""
+    def fit(self, img: np.ndarray,
+            output_file: t.Optional[str] = None) -> "Antideriv":
+        """Fit an input image into the model.
+
+        Parameters
+        ----------
+        img : :obj:`np.ndarray`
+            Input image to fit (and also preprocess).
+
+        output_file : :obj:`str`, optional
+            Path of output file to save the preprocessed image.
+
+        Returns
+        -------
+        Self.
+        """
         self.img_input = self._preprocessor.preprocess(
-            img.copy(),
-            output_file=output_file)
+            img.copy(), output_file=output_file)
+
+        # Keep original image copy to produce the output later
+        self.img_solved = img.copy()
 
         self.img_segments = self._segment_img()
 
@@ -133,9 +215,29 @@ class Antideriv:
 
         return self.img_solved
 
-    def solve(self, return_text: bool = False,
-              verbose: bool = True) -> np.ndarray:
-        """Get solution from preprocessed input image."""
+    def solve(self, return_text: bool = False, verbose: bool = True
+              ) -> t.Union[t.Tuple[np.ndarray, str], np.ndarray]:
+        """Get solution from preprocessed input image.
+
+        Arguments
+        ---------
+        return_text : :obj:`bool`, optional
+            If True, also return the solution as plain text.
+
+        verbose : :obj:`bool`, optional
+            If True, enable print messages produced along the
+            solving process.
+
+        Returns
+        -------
+        If ``return_text`` is False:
+            :obj:`np.ndarray`
+                Input image with solution inserted.
+        else:
+            :obj:`tuple` with :obj:`np.ndarray` and :obj:`str`
+                Input image with solution inserted and the
+                solution itself as plain text.
+        """
         expression = self._get_expression()
 
         if verbose:
