@@ -12,6 +12,8 @@ import keras
 import preprocess
 import postprocess
 
+# import matplotlib.pyplot as plt
+
 
 class Antideriv:
     """Methods for antiderivative detection and symbol recognition."""
@@ -65,11 +67,16 @@ class Antideriv:
             "8",
         )
 
-    def _paint_object(self,
-                      img: np.ndarray,
-                      start_coord: t.Tuple[int, int]
-                      ) -> t.Tuple[int, int, int, int]:
+    def _paint_object(
+            self,
+            img: np.ndarray,
+            start_coord: t.Tuple[int, int],
+            window_size: int = 3,
+            color: t.Optional[int] = None,
+    ) -> t.Tuple[int, int, int, int]:
         """Paint object under the ``star_coord`` in the input image.
+
+        The paiting is in-place.
 
         Arguments
         ---------
@@ -80,31 +87,67 @@ class Antideriv:
             A tuple containing the starting coordinates, x and y, of
             some previously segmented object.
 
+        window_size : :obj:`int`, optional
+            Size of neighborhood window (in pixels) to consider while
+            paiting the object. The larger the window_size is, the
+            larger the gaps between parts of the same object can be.
+
+        color : :obj:`int`, optional
+            Color to paint the detected object. The color can't be the
+            same color as the object (i.e., must be different from the
+            color at ``start_coord`` coordinates. If :obj:`NoneType`,
+            then the default color will be max(img) + 1.
+
         Returns
         -------
         :obj:`tuple` with four :obj:`int`
             Tuple containing four integers relative to, respectively,
             ``x_min``, ``x_max``, ``y_min`` and ``y_max``.
-
-        Notes
-        -----
-            * It is assumed that the value 1 representes the object. All
-            other ``colors`` (values) will be considered as the object
-            boundaries.
-
-            * The reference image is the ``_img_painted`` attribute, not
-            the ``img_input``.
         """
+        if color is None:
+            color = img.max() + 1
+
+        obj_color = img[start_coord]
+
+        if color == obj_color:
+            raise ValueError("'color' can't have the same value as the "
+                             "given image at the starting coordinates.")
+
+        stack = [start_coord]
+        img[start_coord] = color
+
+        while stack:
+            cur_coords = stack.pop()
+
+            cur_x, cur_y = cur_coords
+
+            cur_slice = img[(cur_x - window_size):(cur_x + window_size + 1), (
+                cur_y - window_size):(cur_y + window_size + 1)]
+
+            if cur_slice.size:
+                slice_coords = np.nonzero(cur_slice == obj_color)
+                cur_slice[slice_coords] = color
+
+                stack += [[x + cur_x - window_size, y + cur_y - window_size]
+                          for x, y in zip(*slice_coords)]
+
+        mask = np.argwhere(img == color)
+        x_min, y_min = mask.min(axis=0)
+        x_max, y_max = mask.max(axis=0)
+
+        return x_min, x_max, y_min, y_max
 
     def _get_size_threshold(self, sizes: np.ndarray, whis: np.number = 1.50
                             ) -> t.Tuple[np.number, np.number]:
         """."""
-        _q25, _q75, threshold_val = sizes.percentile((25, 75, 50))
+        _q25, _q75, threshold_val = np.percentile(sizes, (25, 75, 50))
         iqr_whis = whis * (_q75 - _q25)
         return threshold_val, iqr_whis
 
     def _get_obj_coords(
-            self, whis: np.number = 1.50
+            self,
+            whis: np.number = 1.50,
+            window_size: int = 3,
     ) -> t.Tuple[np.ndarray, t.Tuple[np.number, np.number]]:
         """."""
         if self.img_input is None:
@@ -113,38 +156,64 @@ class Antideriv:
         obj_coords = []
         sizes = []
 
-        img_painted = self.img_input.copy()
+        img_painted = np.pad(
+            array=self.img_input.copy(),
+            pad_width=window_size,
+            mode="constant",
+            constant_values=0,
+        )
+
+        # The color '0' is the lack of object, and color '1' is a unpainted
+        # object.
+        color = 2
 
         for i, j in np.ndindex(self.img_input.shape):
-            if img_painted[i, j] == 1:
-                obj_coord = self._paint_object(img_painted, start_coord=(i, j))
-                obj_coords.append(obj_coord)
+            shifted_coords = (i + window_size, j + window_size)
+            if img_painted[shifted_coords] == 1:
+                obj_coord = self._paint_object(
+                    img=img_painted,
+                    start_coord=shifted_coords,
+                    window_size=window_size,
+                    color=color)
+
+                obj_coords.append(np.array(obj_coord) - window_size)
 
                 x_min, x_max, y_min, y_max = obj_coord
                 sizes.append((1 + x_max - x_min) * (1 + y_max - y_min))
+
+                color += 1
 
         threshold_info = self._get_size_threshold(np.array(sizes), whis=whis)
 
         return np.array(obj_coords), threshold_info
 
-    def _segment_img(self, whis: np.number = 1.50) -> t.Sequence[np.ndarray]:
+    def _segment_img(self, whis: np.number = 1.50,
+                     window_size: int = 3) -> t.Sequence[np.ndarray]:
         """Segment the input image into preprocessed units."""
         if self.img_input is None:
             raise TypeError("'img_input' attribute is None.")
 
         segments = []  # type: t.Union[t.List[np.ndarray], np.ndarray]
 
-        obj_coords, threshold_info = self._get_obj_coords(whis=whis)
+        obj_coords, threshold_info = self._get_obj_coords(
+            whis=whis, window_size=window_size)
 
         threshold_val, iqr_whis = threshold_info
 
-        for obj_coord in obj_coords:
+        for obj_coord in sorted(obj_coords, key=lambda coord: coord[2]):
             x_min, x_max, y_min, y_max = obj_coord
 
             obj = self.img_input[x_min:(x_max + 1), y_min:(y_max + 1)]
 
             if np.abs(obj.size - threshold_val) <= iqr_whis:
-                obj = skimage.transform.resize(obj, output_shape=(32, 32))
+                obj = skimage.transform.resize(
+                    image=obj,
+                    output_shape=(32, 32),
+                    anti_aliasing=False,
+                    order=3)
+
+                obj = (obj >= obj.mean()).astype(np.uint8)
+
                 segments.append(obj)
 
         segments = np.array(segments)
@@ -152,8 +221,11 @@ class Antideriv:
 
         return segments
 
-    def fit(self, img: np.ndarray,
-            output_file: t.Optional[str] = None) -> "Antideriv":
+    def fit(self,
+            img: np.ndarray,
+            output_file: t.Optional[str] = None,
+            whis: np.number = 1.50,
+            window_size: int = 10) -> "Antideriv":
         """Fit an input image into the model.
 
         Parameters
@@ -174,7 +246,8 @@ class Antideriv:
         # Keep original image copy to produce the output later
         self.img_solved = img.copy()
 
-        self.img_segments = self._segment_img()
+        self.img_segments = self._segment_img(
+            whis=whis, window_size=window_size)
 
         return self
 
@@ -182,6 +255,14 @@ class Antideriv:
         """Get expression from preprocessed input image using CNN."""
         if self.img_segments is None:
             raise TypeError("No input image fitted in model.")
+        """
+        np.set_printoptions(threshold=np.inf)
+        for seg in self.img_segments:
+            aux = seg.reshape((32, 32))
+            print(aux)
+            plt.imshow(aux.reshape((32, 32)))
+            plt.show()
+        """
 
         preds = self.model.predict(self.img_segments, verbose=0)
 
@@ -243,6 +324,8 @@ class Antideriv:
         if verbose:
             print("Expression: {}".format(expression))
 
+        exit(1)
+
         ans_plain_text, img_sol = self._get_solution(expression)
         img_ans = self._insert_resolution(img_sol)
 
@@ -264,5 +347,5 @@ if __name__ == "__main__":
     input_img = imageio.imread(image_path)
 
     model = Antideriv().fit(input_img, output_file="../preprocessed.jpg")
-    # img, ans = model.solve(return_text=True)
-    # print(ans)
+    img, ans = model.solve(return_text=True, verbose=True)
+    print(ans)
