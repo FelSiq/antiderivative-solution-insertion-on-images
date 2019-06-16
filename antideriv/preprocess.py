@@ -13,16 +13,11 @@ class Preprocessor:
     """Call preprocessing methods for antiderivative input images."""
 
     def __init__(self):
-        """
-
-        Parameters
-        ----------
-
-        Returns
-        ------
+        """Preprocess the input image of Antideriv class.
 
         Notes
         -----
+        Check ``preprocess`` method documentation for more information.
         """
         self.img_preprocessed = None  # type: t.Optional[np.ndarray]
 
@@ -34,7 +29,8 @@ class Preprocessor:
             scipy.ndimage.morphology.generate_binary_structure(2, 2),
             iterations=3))
 
-    def border_crop(self, img: np.ndarray) -> np.ndarray:
+    @classmethod
+    def border_crop(cls, img: np.ndarray) -> np.ndarray:
         """Crop empty preprocessed image border."""
         coords = np.argwhere(img > 0)
 
@@ -69,7 +65,7 @@ class Preprocessor:
         self.img_preprocessed = (scipy.ndimage.morphology.binary_closing(
             self.img_preprocessed, structure=self._opening_mask_2))
 
-        self.img_preprocessed = self.border_crop(self.img_preprocessed)
+        self.img_preprocessed = Preprocessor.border_crop(self.img_preprocessed)
 
         cur_size = np.array(self.img_preprocessed.shape)
         prev_size = 2.0 * cur_size
@@ -80,7 +76,8 @@ class Preprocessor:
                                                   np.ones((11, 11)))
                 self.img_preprocessed[np.logical_and(self.img_preprocessed > 0,
                                                      aux < 1)] = 0
-                self.img_preprocessed = self.border_crop(self.img_preprocessed)
+                self.img_preprocessed = Preprocessor.border_crop(
+                    self.img_preprocessed)
 
             prev_size = cur_size
             cur_size = np.array(self.img_preprocessed.shape)

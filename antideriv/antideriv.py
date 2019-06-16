@@ -1,7 +1,7 @@
 """Module dedicated to the antiderivative detector."""
 import typing as t
-import requests
 import io
+import requests
 
 import numpy as np
 import wolframalpha
@@ -12,25 +12,14 @@ import keras
 import preprocess
 import postprocess
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 
 class Antideriv:
     """Methods for antiderivative detection and symbol recognition."""
 
     def __init__(self):
-        """Main class for antiderivative detection.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-
-        Notes
-        -----
-
-        """
+        """Main class for antiderivative detection."""
         app_id = 'LHLP7U-HHLKWGU3AT'.lower()
 
         self._wolfram_client = wolframalpha.Client(app_id)
@@ -71,7 +60,7 @@ class Antideriv:
             self,
             img: np.ndarray,
             start_coord: t.Tuple[int, int],
-            window_size: int = 3,
+            window_size: t.Tuple[int, int] = (15, 15),
             color: t.Optional[int] = None,
     ) -> t.Tuple[int, int, int, int]:
         """Paint object under the ``star_coord`` in the input image.
@@ -87,10 +76,11 @@ class Antideriv:
             A tuple containing the starting coordinates, x and y, of
             some previously segmented object.
 
-        window_size : :obj:`int`, optional
-            Size of neighborhood window (in pixels) to consider while
-            paiting the object. The larger the window_size is, the
-            larger the gaps between parts of the same object can be.
+        window_size : :obj:`tuple` with two :obj:`int`, optional
+            Size of neighborhood window (in pixels) for each dimension
+            to consider while painting the object. The larger the
+            ``window_size`` value is, the larger the gaps between parts
+            of the same object can be.
 
         color : :obj:`int`, optional
             Color to paint the detected object. The color can't be the
@@ -104,6 +94,10 @@ class Antideriv:
             Tuple containing four integers relative to, respectively,
             ``x_min``, ``x_max``, ``y_min`` and ``y_max``.
         """
+        if len(window_size) != 2:
+            raise ValueError("'window_size' must be a tuple with exactly "
+                             "two integer entries.")
+
         if color is None:
             color = img.max() + 1
 
@@ -121,44 +115,104 @@ class Antideriv:
 
             cur_x, cur_y = cur_coords
 
-            cur_slice = img[(cur_x - window_size):(cur_x + window_size + 1), (
-                cur_y - window_size):(cur_y + window_size + 1)]
+            cur_slice = img[
+                (cur_x - window_size[0]):(cur_x + window_size[0] + 1),
+                (cur_y - window_size[1]):(cur_y + window_size[1] + 1),
+            ]
 
             if cur_slice.size:
                 slice_coords = np.nonzero(cur_slice == obj_color)
                 cur_slice[slice_coords] = color
 
-                stack += [[x + cur_x - window_size, y + cur_y - window_size]
-                          for x, y in zip(*slice_coords)]
+                cur_x -= window_size[0]
+                cur_y -= window_size[1]
 
+                stack += [
+                    (x + cur_x, y + cur_y) for x, y in zip(*slice_coords)
+                ]
+
+        # Get currrent object boundary coordinates
         mask = np.argwhere(img == color)
         x_min, y_min = mask.min(axis=0)
         x_max, y_max = mask.max(axis=0)
 
         return x_min, x_max, y_min, y_max
 
-    def _get_size_threshold(self, sizes: np.ndarray, whis: np.number = 1.50
+    def _get_size_threshold(self, sizes: np.ndarray, whis: np.number = 2.0
                             ) -> t.Tuple[np.number, np.number]:
-        """."""
+        """Calculate the Tukey's boxplot parameters to outlier detection.
+
+        Arguments
+        ---------
+        sizes : :obj:`np.ndarray`
+            Array with all the detected object sizes (area), in pixels.
+
+        whis : :obj:`np.number`, optional
+            Number of IQR (interquartile range) from the median to consider
+            some object a noise (outlier).
+
+        Returns
+        -------
+        :obj:`tuple` with two :obj:`np.number`
+            Tuple containing, respectively, the median size and the
+            IQR (interquartile range) multiplied by ``whis``.
+        """
         _q25, _q75, threshold_val = np.percentile(sizes, (25, 75, 50))
         iqr_whis = whis * (_q75 - _q25)
         return threshold_val, iqr_whis
 
     def _get_obj_coords(
             self,
-            whis: np.number = 1.50,
-            window_size: int = 3,
+            whis: np.number = 2.0,
+            window_size: float = 0.020,
     ) -> t.Tuple[np.ndarray, t.Tuple[np.number, np.number]]:
-        """."""
+        """Get coordinates of each object in preprocessed input image.
+
+        Parameters
+        ----------
+        whis : :obj:`np.number`, optional
+            Number of IQR (interquartile range) from the median to consider
+            some object a noise (outlier).
+
+        window_size : :obj:`np.number`, optional
+            Size, in proportion to each dimension size of the input image, of
+            half the size of the square window to consider as neighborhood for
+            each pixel while paiting objects, for object detection.
+
+            For example, if window_size is 0.025, then the window size for
+            neighborhood of each pixel will be 5% of the size of each dimension
+            of the input image. Note that this parameter must be in the
+            interval (0, 1), preferably much smaller than 1.0.
+
+        Returns
+        -------
+        :obj:`tuple` with :obj:`np.ndarray` and :obj:`tuple` with two numbers
+            * The first entry of the returned tuple is a 2D :obj:`np.ndarray`,
+            where each row represents a different object, and each column
+            represents the minimum or maximum coordinates of the frame that
+            limits each object. More precisely, this array have dimensions Nx4
+            where each column represents, in this order, ``x_min``, ``x_max``,
+            ``y_min``, ``y_max``.
+
+            * The second entry is another tuple containing outlier information,
+            calculated using Tukey's boxplot algorithm. Check the documentation
+            of method ``_get_size_threshold`` for more information.
+        """
         if self.img_input is None:
             raise TypeError("'img_input' attribute is None.")
 
-        obj_coords = []
-        sizes = []
+        obj_coords = []  # type: t.Union[np.ndarray, t.List[np.ndarray]]
+        sizes = []  # type: t.List[int]
+
+        pad_width = np.ceil(
+            np.array(self.img_input.shape) * window_size).astype(int)
 
         img_painted = np.pad(
             array=self.img_input.copy(),
-            pad_width=window_size,
+            pad_width=(
+                (pad_width[0], pad_width[0]),
+                (pad_width[1], pad_width[1]),
+            ),
             mode="constant",
             constant_values=0,
         )
@@ -167,29 +221,58 @@ class Antideriv:
         # object.
         color = 2
 
-        for i, j in np.ndindex(self.img_input.shape):
-            shifted_coords = (i + window_size, j + window_size)
+        for idx_row, idx_col in np.ndindex(self.img_input.shape):
+            shifted_coords = (idx_row - pad_width[0], idx_col - pad_width[1])
             if img_painted[shifted_coords] == 1:
                 obj_coord = self._paint_object(
                     img=img_painted,
                     start_coord=shifted_coords,
-                    window_size=window_size,
+                    window_size=pad_width,
                     color=color)
 
-                obj_coords.append(np.array(obj_coord) - window_size)
+                obj_coords.append(obj_coord)
 
                 x_min, x_max, y_min, y_max = obj_coord
                 sizes.append((1 + x_max - x_min) * (1 + y_max - y_min))
 
                 color += 1
 
+        obj_coords = np.array(obj_coords)
+
+        # Translate obj_coords to non-padded coordinates
+        obj_coords[:, :2] -= pad_width[0]
+        obj_coords[:, 2:] -= pad_width[1]
+
         threshold_info = self._get_size_threshold(np.array(sizes), whis=whis)
 
-        return np.array(obj_coords), threshold_info
+        return obj_coords, threshold_info
 
-    def _segment_img(self, whis: np.number = 1.50,
-                     window_size: int = 3) -> t.Sequence[np.ndarray]:
-        """Segment the input image into preprocessed units."""
+    def _segment_img(self, whis: np.number = 2.0,
+                     window_size: np.number = 0.025) -> t.Sequence[np.ndarray]:
+        """Segment the input image into preprocessed units.
+
+        Parameters
+        ---------
+        whis : :obj:`np.number`, optional
+            Number of IQR (interquartile range) lesser the median to consider
+            some object a noise (outlier). Note that greater objects (that
+            could be considered ``outliers`` from above) are not ignored. The
+            purpose of this strategy is to ignore remaining salt and pepper
+            class of noise in the preprocessed input image.
+
+        window_size : :obj:`np.number`, optional
+            Size, in proportion to each dimension size of the input image, of
+            half the size of the square window to consider as neighborhood for
+            each pixel while paiting objects, for object detection.
+
+            For example, if window_size is 0.025, then the window size for
+            neighborhood of each pixel will be 5% of the size of each dimension
+            of the input image. Note that this parameter must be in the
+            interval (0, 1), preferably much smaller than 1.0.
+
+        Returns
+        -------
+        """
         if self.img_input is None:
             raise TypeError("'img_input' attribute is None.")
 
@@ -205,7 +288,7 @@ class Antideriv:
 
             obj = self.img_input[x_min:(x_max + 1), y_min:(y_max + 1)]
 
-            if np.abs(obj.size - threshold_val) <= iqr_whis:
+            if threshold_val - obj.size <= iqr_whis:
                 obj = skimage.transform.resize(
                     image=obj,
                     output_shape=(32, 32),
@@ -224,8 +307,8 @@ class Antideriv:
     def fit(self,
             img: np.ndarray,
             output_file: t.Optional[str] = None,
-            whis: np.number = 1.50,
-            window_size: int = 10) -> "Antideriv":
+            whis: np.number = 2.0,
+            window_size: float = 0.020) -> "Antideriv":
         """Fit an input image into the model.
 
         Parameters
@@ -236,10 +319,38 @@ class Antideriv:
         output_file : :obj:`str`, optional
             Path of output file to save the preprocessed image.
 
+        whis : :obj:`np.number`, optional
+            Number of IQR (interquartile range) from the median of the object
+            sizes in the input image to consider some object a noise (outlier).
+            In this case, the object will not be inserted in the expression.
+
+        window_size : :obj:`np.number`, optional
+            Size, in proportion to each dimension size of the input image, of
+            half the size of the square window to consider as neighborhood for
+            each pixel while paiting objects, for object detection.
+
+            For example, if window_size is 0.025, then the window size for
+            neighborhood of each pixel will be 5% of the size of each dimension
+            of the input image. Note that this parameter must be in the
+            interval (0, 1), preferably much smaller than 1.0.
+
         Returns
         -------
-        Self.
+        Self
         """
+        if not isinstance(whis, (float, int, np.number)):
+            raise TypeError("'whis' must be a number.")
+
+        if not isinstance(window_size, (float, int, np.number)):
+            raise TypeError("'window_size' must be a number.")
+
+        if whis <= 0.0:
+            raise ValueError("'Whis' must be a positive real value.")
+
+        if not 0.0 < window_size < 1.0:
+            raise ValueError("window size must be in (0.0, 1.0) interval, "
+                             "preferably much lesser than 1.0.")
+
         self.img_input = self._preprocessor.preprocess(
             img.copy(), output_file=output_file)
 
@@ -255,14 +366,6 @@ class Antideriv:
         """Get expression from preprocessed input image using CNN."""
         if self.img_segments is None:
             raise TypeError("No input image fitted in model.")
-        """
-        np.set_printoptions(threshold=np.inf)
-        for seg in self.img_segments:
-            aux = seg.reshape((32, 32))
-            print(aux)
-            plt.imshow(aux.reshape((32, 32)))
-            plt.show()
-        """
 
         preds = self.model.predict(self.img_segments, verbose=0)
 
@@ -278,7 +381,7 @@ class Antideriv:
 
         def get_solution_image(url: str) -> np.ndarray:
             """Get the image of the solution from Wolfram Alpha."""
-            req_ans = requests.get(ans_img_url)
+            req_ans = requests.get(url)
             return imageio.imread(io.BytesIO(req_ans.content))
 
         res = self._wolfram_client.query(expression)
