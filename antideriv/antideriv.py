@@ -247,6 +247,13 @@ class Antideriv:
 
         return obj_coords, threshold_info
 
+    def _is_outlier(self,
+                    obj: np.ndarray,
+                    threshold_info: t.Tuple[np.number, np.number]) -> bool:
+        """Check if given image segment is a possible outlier."""
+        threshold_val, iqr_whis = threshold_info
+        return (threshold_val - obj.size) > iqr_whis
+
     def _segment_img(self, whis: np.number = 2.0,
                      window_size: np.number = 0.025) -> t.Sequence[np.ndarray]:
         """Segment the input image into preprocessed units.
@@ -281,14 +288,12 @@ class Antideriv:
         obj_coords, threshold_info = self._get_obj_coords(
             whis=whis, window_size=window_size)
 
-        threshold_val, iqr_whis = threshold_info
-
         for obj_coord in sorted(obj_coords, key=lambda coord: coord[2]):
             x_min, x_max, y_min, y_max = obj_coord
 
             obj = self.img_input[x_min:(x_max + 1), y_min:(y_max + 1)]
 
-            if threshold_val - obj.size <= iqr_whis:
+            if not self._is_outlier(obj, threshold_info):
                 obj = skimage.transform.resize(
                     image=obj,
                     output_shape=(32, 32),
@@ -362,17 +367,39 @@ class Antideriv:
 
         return self
 
-    def _get_expression(self) -> str:
-        """Get expression from preprocessed input image using CNN."""
+    def _get_expression(self, threshold: float = 0.30) -> str:
+        """Get expression from preprocessed input image using CNN.
+
+        Paramters
+        ---------
+        threshold : :obj:`float`, optional
+            Minimum difference of percentage between the most probable
+            class and the second most probable one to allow the object
+            be inserted in the final expression.
+
+        Returns
+        -------
+        :obj:`str`
+            Text form of the expression in the input image.
+        """
         if self.img_segments is None:
             raise TypeError("No input image fitted in model.")
 
         preds = self.model.predict(self.img_segments, verbose=0)
 
-        expression = [
-            self._CLASS_SYMBOL[symbol_ind]
-            for symbol_ind in preds.argmax(axis=1)
-        ]
+        expression = []  # type: t.List[str]
+
+        for pred in preds:
+            # Decreasing fort
+            class_ranking = np.argsort(-pred)
+
+            # Calculate the difference between the percentage of the most
+            # probable and second most probable classes
+            certainty = np.abs(np.subtract(*pred[class_ranking <= 1]))
+
+            if certainty >= threshold:
+                most_prob_class = self._CLASS_SYMBOL[pred.argmax()]
+                expression.append(most_prob_class)
 
         return " ".join(expression)
 
@@ -427,8 +454,6 @@ class Antideriv:
         if verbose:
             print("Expression: {}".format(expression))
 
-        exit(1)
-
         ans_plain_text, img_sol = self._get_solution(expression)
         img_ans = self._insert_resolution(img_sol)
 
@@ -452,3 +477,6 @@ if __name__ == "__main__":
     model = Antideriv().fit(input_img, output_file="../preprocessed.jpg")
     img, ans = model.solve(return_text=True, verbose=True)
     print(ans)
+
+    plt.imshow(img)
+    plt.show()
