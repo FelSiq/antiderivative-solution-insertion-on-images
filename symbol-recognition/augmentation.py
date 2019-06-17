@@ -10,17 +10,20 @@ import numpy as np
 OUTPUT_PATH = "./data-augmented"
 RE_CLASS_NAME = re.compile(r"(?<=class_)[^_]+")
 OUTPUT_FILE_TYPE = "png"
-VAR_NUM = 10
+VAR_NUM = 2
 
 
 def gen_variants(image: np.ndarray,
                  random_seed: int) -> t.Sequence[np.ndarray]:
     """Generate image variants using random data augmentation."""
     img_gen = keras.preprocessing.image.ImageDataGenerator(
-        width_shift_range=0.075,
-        height_shift_range=0.075,
-        rotation_range=12.5,
-        zoom_range=0.1)
+        width_shift_range=0.050,
+        height_shift_range=0.050,
+        rotation_range=5.0,
+        zoom_range=0.05)
+
+    if image.ndim == 2:
+        image = image.reshape(*image.shape, 1)
 
     it = img_gen.flow(np.expand_dims(image, 0), batch_size=1, seed=random_seed)
 
@@ -85,4 +88,4 @@ def augment_data(dataset_path: str, random_seed: int) -> None:
 
 
 if __name__ == "__main__":
-    augment_data("./data-original", random_seed=2805)
+    augment_data("./data-balanced", random_seed=2805)

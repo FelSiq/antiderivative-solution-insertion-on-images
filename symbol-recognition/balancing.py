@@ -20,19 +20,21 @@ RE_CLASS_NAME = re.compile(r"(?<=class_)[^_]+")
 
 
 def undersampling(class_path: str, inst_names: t.Iterable[str],
-                  random_seed: int, trimmed_class_size: int,
+                  class_name: str, random_seed: int, trimmed_class_size: int,
                   outpath: str) -> None:
     """Choose random instances of given class and copy to output path."""
     np.random.seed(random_seed)
     chosen_ind = np.random.choice(
         len(inst_names), size=trimmed_class_size, replace=False)
 
-    for ind in chosen_ind:
+    for new_inst_ind, ind in enumerate(chosen_ind):
         chosen_inst = os.path.join(class_path, inst_names[ind])
-        shutil.copy(chosen_inst, outpath)
+        inst_out_name = "_".join((class_name, str(new_inst_ind)))
+
+        shutil.copy(chosen_inst, os.path.join(outpath, inst_out_name))
 
 
-def oversampling(class_path: str, inst_names: t.Iterable[str],
+def oversampling(class_path: str, inst_names: t.Iterable[str], class_name: str,
                  random_seed: int, trimmed_class_size: int,
                  outpath: str) -> None:
     """Choose random instances of given class and copy to output path."""
@@ -46,13 +48,13 @@ def oversampling(class_path: str, inst_names: t.Iterable[str],
 
     np.random.seed(random_seed)
     chosen_ind = np.random.choice(
-        class_size,
-        size=trimmed_class_size - class_size,
-        replace=True)
+        class_size, size=trimmed_class_size - class_size, replace=True)
 
-    for ind in chosen_ind:
+    for new_inst_ind, ind in enumerate(chosen_ind):
         chosen_inst = os.path.join(class_path, inst_names[ind])
-        shutil.copy(chosen_inst, outpath)
+        inst_out_name = "_".join((class_name, str(new_inst_ind)))
+
+        shutil.copy(chosen_inst, os.path.join(outpath, inst_out_name))
 
 
 def read_class_data(class_path: str, inst_names: t.Iterable[str],
@@ -77,6 +79,7 @@ def read_class_data(class_path: str, inst_names: t.Iterable[str],
 
     chosen_method(
         class_path=class_path,
+        class_name=CLASS_NAME,
         inst_names=inst_names,
         random_seed=random_seed,
         trimmed_class_size=trimmed_class_size,
@@ -96,7 +99,7 @@ def class_trimmed_mean_size(dataset_path: str, cutoff: float = 0.1) -> int:
 
 
 def balance_classes(dataset_path: str, random_seed: int,
-                    cutoff: float = 0.15) -> None:
+                    cutoff: float = 0.10) -> None:
     """Create a new directory with all classes balanced.
 
     The strategy adopted is a mix of undersampling and
