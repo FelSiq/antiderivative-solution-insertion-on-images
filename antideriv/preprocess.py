@@ -47,9 +47,31 @@ class Preprocessor:
 
         The procedures applied to the image are:
             1. RGB to Grayscale
-            2. Otsu threshold
+            2. Sobel filter
+            3. Otsu threshold
             4. Morphologic binary closing
             5. Image empty border crop
+            6. (Repeat until image size does not change significantly)
+                6.1. Rank 11 median filter, but only removing non-zero values,
+                    i.e., it does not affect pixels with zero value.
+                6.2. Empty border crop
+
+        Arguments
+        ---------
+        img : :obj:`np.ndarray`
+            Image to be processed.
+
+        plot : :obj:`bool`, optional
+            If True, plot the final preprocessed image.
+
+        output_file : :obj:`str`, optional
+            If not :obj:`NoneType`, save the final preprocessed image in the
+            given filepath.
+
+        Returns
+        -------
+        :obj:`np.ndarray`
+            Preprocessed image.
         """
         self.img_preprocessed = skimage.color.rgb2gray(img)
 
@@ -87,7 +109,9 @@ class Preprocessor:
             plt.imshow(self.img_preprocessed, cmap="gray", vmin=0, vmax=1)
             plt.show()
 
-        if output_file:
-            plt.imsave(output_file, self.img_preprocessed, cmap="gray")
+        self.img_preprocessed = self.img_preprocessed.astype(np.uint8)
 
-        return self.img_preprocessed.astype(np.uint8)
+        if output_file:
+            plt.imsave(output_file, 255 * self.img_preprocessed, cmap="gray")
+
+        return self.img_preprocessed
