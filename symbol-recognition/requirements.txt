@@ -3,3 +3,4 @@ imageio
 numpy
 scikit-image
 tensorflow
+scipy
