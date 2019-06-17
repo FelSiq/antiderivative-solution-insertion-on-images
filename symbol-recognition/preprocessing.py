@@ -6,27 +6,41 @@ import re
 import numpy as np
 import skimage
 import imageio
+import scipy.ndimage
 
 
-INPUT_PATH = "./data-augmented"
 OUTPUT_PATH = "./data-augmented-preprocessed"
 RE_CLASS_NAME = re.compile(r"(?<=class_)[^_]+")
 OUTPUT_FILE_TYPE = "png"
 
 
-def mean_threshold(img: np.ndarray):
-    """Apply thresholding on image."""
-    threshold = img.mean()
-    return 255 * (img <= threshold)
-
-
 def preprocess_img(img: np.ndarray) -> np.ndarray:
-    """Transform image to grayscale and apply mean threshold."""
-    res_img = skimage.color.rgb2gray(img)
-    res_img = skimage.transform.resize(res_img, (32, 32), preserve_range=True)
-    res_img = mean_threshold(res_img)
+    """Transform image to grayscale and various transformation."""
+    img = skimage.color.rgb2gray(img)
 
-    return res_img
+    # Mean thresholding
+    img = img < img.mean()
+
+    # Dilation
+    img = scipy.ndimage.morphology.binary_dilation(img, iterations=2)
+
+    # Empty border crop
+    mask = np.argwhere(img)
+    x_min, y_min = mask.min(axis=0)
+    x_max, y_max = mask.max(axis=0) + 1
+    img = img[x_min:x_max, y_min:y_max]
+
+    # Resizing to fit CNN input shape
+    img = skimage.transform.resize(
+        image=img,
+        output_shape=(45, 45),
+        anti_aliasing=False,
+        order=3)
+
+    # Mean thresholding
+    img = img >= img.mean()
+
+    return img
 
 
 def read_class_data(
@@ -35,8 +49,6 @@ def read_class_data(
     """Get image dataset from given ``filepath``."""
     CLASS_NAME = RE_CLASS_NAME.search(class_path).group()
 
-    CLASS_FILEPATH_INPUT = os.path.join(
-        INPUT_PATH, "_".join(("class", CLASS_NAME)))
     CLASS_FILEPATH_OUTPUT = os.path.join(
         OUTPUT_PATH, "_".join(("class", CLASS_NAME)))
 
@@ -44,7 +56,7 @@ def read_class_data(
         os.makedirs(CLASS_FILEPATH_OUTPUT)
 
     for img_name in inst_names:
-        img_filepath = os.path.join(CLASS_FILEPATH_INPUT, img_name)
+        img_filepath = os.path.join(class_path, img_name)
 
         img = skimage.io.imread(img_filepath)
         res_img = preprocess_img(img)
@@ -57,9 +69,9 @@ def read_class_data(
             format=OUTPUT_FILE_TYPE)
 
 
-def preprocess() -> None:
+def preprocess(dataset_path: str) -> None:
     """Preprocess all training images."""
-    file_tree = os.walk(INPUT_PATH)
+    file_tree = os.walk(dataset_path)
     file_tree.__next__()
 
     if not os.path.exists(OUTPUT_PATH):
@@ -72,4 +84,4 @@ def preprocess() -> None:
 
 
 if __name__ == "__main__":
-    preprocess()
+    preprocess("./data-augmented")

@@ -56,7 +56,7 @@ def read_class_data(class_path: str, inst_names: t.Iterable[str],
     if not os.path.exists(CLASS_FILEPATH):
         os.makedirs(CLASS_FILEPATH)
 
-    start_var_ind = len(inst_names)
+    start_var_ind = 0
 
     for inst_name in inst_names:
         cur_inst = imageio.imread(os.path.join(class_path, inst_name))
