@@ -107,7 +107,7 @@ class Antideriv:
             raise ValueError("'color' can't have the same value as the "
                              "given image at the starting coordinates.")
 
-        stack = [start_coord]
+        stack = {start_coord}
         img[start_coord] = color
 
         while stack:
@@ -127,9 +127,9 @@ class Antideriv:
                 cur_x -= window_size[0]
                 cur_y -= window_size[1]
 
-                stack += [
+                stack.update({
                     (x + cur_x, y + cur_y) for x, y in zip(*slice_coords)
-                ]
+                })
 
         # Get currrent object boundary coordinates
         mask = np.argwhere(img == color)
@@ -138,34 +138,11 @@ class Antideriv:
 
         return x_min, x_max, y_min, y_max
 
-    def _get_size_threshold(self, sizes: np.ndarray, whis: np.number = 2.0
-                            ) -> t.Tuple[np.number, np.number]:
-        """Calculate the Tukey's boxplot parameters to outlier detection.
-
-        Arguments
-        ---------
-        sizes : :obj:`np.ndarray`
-            Array with all the detected object sizes (area), in pixels.
-
-        whis : :obj:`np.number`, optional
-            Number of IQR (interquartile range) from the median to consider
-            some object a noise (outlier).
-
-        Returns
-        -------
-        :obj:`tuple` with two :obj:`np.number`
-            Tuple containing, respectively, the median size and the
-            IQR (interquartile range) multiplied by ``whis``.
-        """
-        _q25, _q75, threshold_val = np.percentile(sizes, (25, 75, 50))
-        iqr_whis = whis * (_q75 - _q25)
-        return threshold_val, iqr_whis
-
     def _get_obj_coords(
             self,
-            whis: np.number = 2.0,
+            whis: np.number = 1.5,
             window_size: float = 0.020,
-    ) -> t.Tuple[np.ndarray, t.Tuple[np.number, np.number]]:
+    ) -> t.Tuple[np.ndarray, np.number]:
         """Get coordinates of each object in preprocessed input image.
 
         Parameters
@@ -186,7 +163,7 @@ class Antideriv:
 
         Returns
         -------
-        :obj:`tuple` with :obj:`np.ndarray` and :obj:`tuple` with two numbers
+        :obj:`tuple` with :obj:`np.ndarray` and :obj:`np.number`
             * The first entry of the returned tuple is a 2D :obj:`np.ndarray`,
             where each row represents a different object, and each column
             represents the minimum or maximum coordinates of the frame that
@@ -194,15 +171,11 @@ class Antideriv:
             where each column represents, in this order, ``x_min``, ``x_max``,
             ``y_min``, ``y_max``.
 
-            * The second entry is another tuple containing outlier information,
-            calculated using Tukey's boxplot algorithm. Check the documentation
-            of method ``_get_size_threshold`` for more information.
+            * The second entry is the median value of object sizes. Used to
+            detect possible remaining noises segmented in the input image.
         """
         if self.img_input is None:
             raise TypeError("'img_input' attribute is None.")
-
-        obj_coords = []  # type: t.Union[np.ndarray, t.List[np.ndarray]]
-        sizes = []  # type: t.List[int]
 
         pad_width = np.ceil(
             np.array(self.img_input.shape) * window_size).astype(int)
@@ -220,6 +193,9 @@ class Antideriv:
         # The color '0' is the lack of object, and color '1' is a unpainted
         # object.
         color = 2
+
+        obj_coords = []  # type: t.Union[np.ndarray, t.List[np.ndarray]]
+        sizes = []  # type: t.List[int]
 
         for idx_row, idx_col in np.ndindex(self.img_input.shape):
             shifted_coords = (idx_row - pad_width[0], idx_col - pad_width[1])
@@ -243,19 +219,16 @@ class Antideriv:
         obj_coords[:, :2] -= pad_width[0]
         obj_coords[:, 2:] -= pad_width[1]
 
-        threshold_info = self._get_size_threshold(np.array(sizes), whis=whis)
-
-        return obj_coords, threshold_info
+        return obj_coords, np.median(sizes)
 
     def _is_outlier(self,
                     obj: np.ndarray,
-                    threshold_info: t.Tuple[np.number, np.number]) -> bool:
+                    threshold_val: t.Tuple[np.number, np.number]) -> bool:
         """Check if given image segment is a possible outlier."""
-        threshold_val, iqr_whis = threshold_info
-        return (threshold_val - obj.size) > iqr_whis
+        return obj.size < threshold_val * 0.15
 
-    def _segment_img(self, whis: np.number = 2.0,
-                     window_size: np.number = 0.025) -> t.Sequence[np.ndarray]:
+    def _segment_img(self, whis: np.number = 1.5,
+                     window_size: np.number = 0.025) -> np.ndarray:
         """Segment the input image into preprocessed units.
 
         Parameters
@@ -279,13 +252,16 @@ class Antideriv:
 
         Returns
         -------
+        :obj:`np.ndarray`
+            Numpy array containing all detected objects in preprocessed input
+            image.
         """
         if self.img_input is None:
             raise TypeError("'img_input' attribute is None.")
 
         segments = []  # type: t.Union[t.List[np.ndarray], np.ndarray]
 
-        obj_coords, threshold_info = self._get_obj_coords(
+        obj_coords, threshold_val = self._get_obj_coords(
             whis=whis, window_size=window_size)
 
         for obj_coord in sorted(obj_coords, key=lambda coord: coord[2]):
@@ -293,14 +269,17 @@ class Antideriv:
 
             obj = self.img_input[x_min:(x_max + 1), y_min:(y_max + 1)]
 
-            if not self._is_outlier(obj, threshold_info):
+            if not self._is_outlier(obj, threshold_val):
                 obj = skimage.transform.resize(
                     image=obj,
-                    output_shape=(32, 32),
+                    output_shape=(45, 45),
                     anti_aliasing=False,
                     order=3)
 
                 obj = (obj >= obj.mean()).astype(np.uint8)
+
+                plt.imshow(obj)
+                plt.show()
 
                 segments.append(obj)
 
@@ -312,7 +291,7 @@ class Antideriv:
     def fit(self,
             img: np.ndarray,
             output_file: t.Optional[str] = None,
-            whis: np.number = 2.0,
+            whis: np.number = 1.5,
             window_size: float = 0.020) -> "Antideriv":
         """Fit an input image into the model.
 
@@ -367,7 +346,7 @@ class Antideriv:
 
         return self
 
-    def _get_expression(self, threshold: float = 0.30) -> str:
+    def _get_expression(self, threshold: float = 0.15) -> str:
         """Get expression from preprocessed input image using CNN.
 
         Paramters
@@ -454,6 +433,7 @@ class Antideriv:
         if verbose:
             print("Expression: {}".format(expression))
 
+        exit(1)
         ans_plain_text, img_sol = self._get_solution(expression)
         img_ans = self._insert_resolution(img_sol)
 
@@ -474,7 +454,7 @@ if __name__ == "__main__":
 
     input_img = imageio.imread(image_path)
 
-    model = Antideriv().fit(input_img, output_file="../preprocessed.jpg")
+    model = Antideriv().fit(input_img, output_file="../preprocessed.png")
     img, ans = model.solve(return_text=True, verbose=True)
     print(ans)
 
