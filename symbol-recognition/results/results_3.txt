@@ -1,4 +1,0 @@
-Started training with architecture 24...
-Architecture 24 mean results: [0.11060538 0.96616162]
-Final results
-Architecture 24 mean results: [0.11060538 0.96616162]
