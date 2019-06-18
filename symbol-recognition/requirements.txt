@@ -4,3 +4,4 @@ numpy
 scikit-image
 tensorflow
 scipy
+sklearn

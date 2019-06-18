@@ -656,6 +656,7 @@ if __name__ == "__main__":
 
     results = {}
 
+    """
     # Get the performance of all architectures
 
     print("Testing architectures...")
@@ -716,7 +717,7 @@ if __name__ == "__main__":
         y=y_train,
         validation_data=(X_val, y_val),
         epochs=35,
-        batch_size=4,
+        batch_size=64,
         callbacks=[es],
         verbose=1)
 
@@ -737,4 +738,3 @@ if __name__ == "__main__":
     model = keras.models.load_model("./frozen_models/model_16.h5")
     res = model.evaluate(X_train, y_train)
     print(res)
-    """

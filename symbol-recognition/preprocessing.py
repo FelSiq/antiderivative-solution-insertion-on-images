@@ -13,6 +13,16 @@ OUTPUT_PATH = "./data-augmented-preprocessed"
 RE_CLASS_NAME = re.compile(r"(?<=class_)[^_]+")
 OUTPUT_FILE_TYPE = "png"
 
+def resize(img: np.ndarray, output_shape: t.Tuple[int, int] = (45, 45)) -> np.ndarray:
+    """Resize image."""
+    img = skimage.transform.resize(
+        image=img,
+        output_shape=output_shape,
+        anti_aliasing=False,
+        order=3)
+
+    return img
+
 
 def preprocess_img(img: np.ndarray) -> np.ndarray:
     """Transform image to grayscale and various transformation."""
@@ -24,18 +34,8 @@ def preprocess_img(img: np.ndarray) -> np.ndarray:
     # Dilation
     img = scipy.ndimage.morphology.binary_dilation(img, iterations=2)
 
-    # Empty border crop
-    mask = np.argwhere(img)
-    x_min, y_min = mask.min(axis=0)
-    x_max, y_max = mask.max(axis=0) + 1
-    img = img[x_min:x_max, y_min:y_max]
-
-    # Resizing to fit CNN input shape
-    img = skimage.transform.resize(
-        image=img,
-        output_shape=(45, 45),
-        anti_aliasing=False,
-        order=3)
+    # Resize the image
+    img = resize(img)
 
     # Mean thresholding
     img = img >= img.mean()
