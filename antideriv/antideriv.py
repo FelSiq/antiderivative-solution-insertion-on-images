@@ -2,6 +2,7 @@
 import typing as t
 import io
 import requests
+import re
 
 import numpy as np
 import wolframalpha
@@ -56,6 +57,8 @@ class Antideriv:
             "8",
             "9",
         )
+
+        self._RE_FIX_DNOTATION = re.compile(r"(?<=d)\s+(?=.)")
 
     def _paint_object(
             self,
@@ -286,9 +289,6 @@ class Antideriv:
 
                 obj = (obj >= obj.mean()).astype(np.uint8)
 
-                plt.imshow(obj, cmap="gray")
-                plt.show()
-
                 segments.append(obj)
 
         segments = np.array(segments)
@@ -388,7 +388,7 @@ class Antideriv:
                 most_prob_class = self._CLASS_SYMBOL[pred.argmax()]
                 expression.append(most_prob_class)
 
-        return " ".join(expression).replace("d x", "dx")
+        return self._RE_FIX_DNOTATION.sub("", " ".join(expression))
 
     def _get_solution(self, expression: str) -> t.Tuple[str, np.ndarray]:
         """Call Wolfram Alpha to get answer to the given ``expression``."""
