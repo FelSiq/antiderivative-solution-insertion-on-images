@@ -37,16 +37,16 @@ class Antideriv:
         # change the symbol order.
         self._CLASS_SYMBOL = (
             "0",
-            "9",
+            "1",
             "x",
-            "e",
             "+",
             "-",
+            "/",
             "(",
             ")",
-            "/",
+            "e",
             "integrate",
-            "1",
+            "d",
             "2",
             "3",
             "4",
@@ -54,6 +54,7 @@ class Antideriv:
             "6",
             "7",
             "8",
+            "9",
         )
 
     def _paint_object(
@@ -141,7 +142,7 @@ class Antideriv:
     def _get_obj_coords(
             self,
             whis: np.number = 1.5,
-            window_size: float = 0.020,
+            window_size: float = 1.0e-6,
     ) -> t.Tuple[np.ndarray, np.number]:
         """Get coordinates of each object in preprocessed input image.
 
@@ -270,13 +271,23 @@ class Antideriv:
             obj = self.img_input[x_min:(x_max + 1), y_min:(y_max + 1)]
 
             if not self._is_outlier(obj, threshold_val):
-                obj = skimage.transform.resize(
+                obj = skimage.transform.rescale(
                     image=obj,
-                    output_shape=(45, 45),
+                    scale=45.0 / np.max(obj.shape),
                     anti_aliasing=False,
+                    multichannel=False,
                     order=3)
 
+                obj = np.pad(
+                    array=obj,
+                    pad_width=np.repeat(np.ceil((45 - np.array(obj.shape)) / 2), repeats=2).astype(int).reshape((2, 2)),
+                    mode="constant",
+                    constant_values=0)[:45, :45]
+
                 obj = (obj >= obj.mean()).astype(np.uint8)
+
+                plt.imshow(obj, cmap="gray")
+                plt.show()
 
                 segments.append(obj)
 
@@ -289,7 +300,7 @@ class Antideriv:
             img: np.ndarray,
             output_file: t.Optional[str] = None,
             whis: np.number = 1.5,
-            window_size: float = 0.020) -> "Antideriv":
+            window_size: float = 1.0e-6) -> "Antideriv":
         """Fit an input image into the model.
 
         Parameters
@@ -343,7 +354,7 @@ class Antideriv:
 
         return self
 
-    def _get_expression(self, threshold: float = 0.15) -> str:
+    def _get_expression(self, threshold: float = 0.0) -> str:
         """Get expression from preprocessed input image using CNN.
 
         Paramters
@@ -365,7 +376,7 @@ class Antideriv:
 
         expression = []  # type: t.List[str]
 
-        for pred in preds:
+        for idx, pred in enumerate(preds):
             # Decreasing fort
             class_ranking = np.argsort(-pred)
 
@@ -377,7 +388,7 @@ class Antideriv:
                 most_prob_class = self._CLASS_SYMBOL[pred.argmax()]
                 expression.append(most_prob_class)
 
-        return " ".join(expression)
+        return " ".join(expression).replace("d x", "dx")
 
     def _get_solution(self, expression: str) -> t.Tuple[str, np.ndarray]:
         """Call Wolfram Alpha to get answer to the given ``expression``."""
@@ -430,7 +441,6 @@ class Antideriv:
         if verbose:
             print("Expression: {}".format(expression))
 
-        exit(1)
         ans_plain_text, img_sol = self._get_solution(expression)
         img_ans = self._insert_resolution(img_sol)
 

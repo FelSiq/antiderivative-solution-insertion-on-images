@@ -87,29 +87,18 @@ class Preprocessor:
         self.img_preprocessed = (scipy.ndimage.morphology.binary_closing(
             self.img_preprocessed, structure=self._opening_mask_2))
 
-        self.img_preprocessed = Preprocessor.border_crop(self.img_preprocessed)
+        self.img_preprocessed = (
+            skimage.filters.rank.median(self.img_preprocessed, np.ones((3, 3))))
 
-        cur_size = np.array(self.img_preprocessed.shape)
-        prev_size = 2.0 * cur_size
-
-        while np.any(prev_size > (cur_size * 1.1)):
-            for _ in np.arange(2):
-                aux = skimage.filters.rank.median(self.img_preprocessed,
-                                                  np.ones((11, 11)))
-                self.img_preprocessed[np.logical_and(self.img_preprocessed > 0,
-                                                     aux < 1)] = 0
-                self.img_preprocessed = Preprocessor.border_crop(
-                    self.img_preprocessed)
-
-            prev_size = cur_size
-            cur_size = np.array(self.img_preprocessed.shape)
+        self.img_preprocessed = Preprocessor.border_crop(
+            self.img_preprocessed)
 
         if plot:
             plt.subplot(122)
             plt.imshow(self.img_preprocessed, cmap="gray", vmin=0, vmax=1)
             plt.show()
 
-        self.img_preprocessed = self.img_preprocessed.astype(np.uint8)
+        self.img_preprocessed = self.img_preprocessed.astype(np.uint8) // self.img_preprocessed.max()
 
         if output_file:
             plt.imsave(output_file, 255 * self.img_preprocessed, cmap="gray")
