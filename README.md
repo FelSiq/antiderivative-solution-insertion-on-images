@@ -14,8 +14,10 @@ The premise is to identify antiderivatives (because proper integrals seems to be
 
 # Sample inputs
 Here some examples of expected program inputs.
-<img src="/sample-inputs/sample-3.jpg" width="400" height="400" />
-<img src="/sample-inputs/sample-4.jpg" width="400" height="400" />
+<p>
+  <img src="/sample-inputs/sample-4.jpg" width="400" height="400" />
+  <img src="/sample-inputs/sample-5.jpg" width="400" height="400" />
+</p>
 
 # Workflow
 ![Image of the final workflow](/workflow.png)

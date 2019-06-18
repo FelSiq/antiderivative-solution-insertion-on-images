@@ -601,9 +601,9 @@ class CNNModel(Architectures):
                 epochs=epochs,
                 batch_size=batch_size,
                 callbacks=[es],
-                verbose=0)
+                verbose=1)
 
-            res = self.model.evaluate(X_test, y_test, verbose=0)
+            res = self.model.evaluate(X_test, y_test, verbose=1)
             results.append(res)
 
         return np.array(results)
@@ -640,13 +640,15 @@ def get_data(filepath: str) -> t.Tuple[np.ndarray, np.ndarray]:
         X += new_insts
         y += len(new_insts) * [class_name]
 
-    X, y = np.array(X).astype(np.uint8) // 255, np.array(y)
+    X, y = np.array(X).astype(np.uint8), np.array(y)
 
     return X.reshape(*X.shape, 1), y
 
 
 if __name__ == "__main__":
+    print("Getting data...")
     X, y = get_data("./data-augmented-preprocessed")
+    print("Ok.")
 
     y = sklearn.preprocessing.LabelEncoder().fit_transform(y)
 
@@ -654,10 +656,10 @@ if __name__ == "__main__":
 
     results = {}
 
-    """
     # Get the performance of all architectures
 
-    for architecture_id in np.arange(24, model.arch_num + 1):
+    print("Testing architectures...")
+    for architecture_id in np.arange(1, model.arch_num + 1):
         print("Started training with architecture {}..."
               "".format(architecture_id))
 
@@ -669,7 +671,7 @@ if __name__ == "__main__":
             validation_split=0.1,
             epochs=30,
             batch_size=32,
-            patience=5,
+            patience=8,
             min_delta=0.01)
 
         results[architecture_id] = cur_score
@@ -683,8 +685,6 @@ if __name__ == "__main__":
         cur_results = results[architecture_id]
         print("Architecture {} mean results:".format(architecture_id),
               cur_results.mean(axis=0))
-    """
-
     """
     # Get the best model (in this case, architecture #16)
     model.init_architecture(
@@ -716,12 +716,11 @@ if __name__ == "__main__":
         y=y_train,
         validation_data=(X_val, y_val),
         epochs=35,
-        batch_size=32,
+        batch_size=4,
         callbacks=[es],
         verbose=1)
 
     model.freeze_architecture("./frozen_models")
-    """
 
     # Test the best model (architecture 16)
     X_train, X_val, y_train, y_val = sklearn.model_selection.train_test_split(
@@ -738,3 +737,4 @@ if __name__ == "__main__":
     model = keras.models.load_model("./frozen_models/model_16.h5")
     res = model.evaluate(X_train, y_train)
     print(res)
+    """

@@ -278,9 +278,6 @@ class Antideriv:
 
                 obj = (obj >= obj.mean()).astype(np.uint8)
 
-                plt.imshow(obj)
-                plt.show()
-
                 segments.append(obj)
 
         segments = np.array(segments)
