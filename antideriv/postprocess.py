@@ -18,7 +18,7 @@ class Postprocessor:
                              img: np.ndarray,
                              output_shape: t.Tuple[int, int],
                              ) -> np.ndarray:
-        """."""
+        """Preprocess the solution image given by Wolfram Alpha."""
 
         img = skimage.transform.resize(
             image=img,
@@ -36,10 +36,32 @@ class Postprocessor:
             self,
             img_base: np.ndarray,
             img_sol: np.ndarray,
-            sol_prop_size: t.Tuple[float, float] = (0.15, 0.8),
+            sol_prop_size: t.Tuple[float, float] = (0.15, 0.80),
             sol_prop_local: t.Tuple[np.number, np.number] = (0.80, 0.50),
             ) -> np.ndarray:
-        """."""
+        """Process the solution image and insert it to the ``img_base``.
+
+        Arguments
+        ---------
+        img_base : :obj:`np.ndarray`
+            Image to serve as base, i.e., the target of the insertion.
+
+        img_sol : :obj:`np.ndarray`
+            Image of the integration solution of the input image.
+
+        sol_prop_size : :obj:`tuple` with two :obj:`float`, optional
+            Tuple containing the proportion of space which the ``img_sol``
+            must take from the ``img_base`` at each axis.
+
+        sol_prop_local : :obj:`tuple` with two :obj:`float`, optional
+            Tuple containing the proportion of ``img_base`` where the
+            center of the postprocessed ``img_sol`` must be.
+
+        Returns
+        -------
+        :obj:`np.ndarray`
+            ``img_base`` with postprocessed ``img_sol`` inserted inside it.
+        """
         img_base = skimage.color.rgb2gray(img_base)
 
         output_shape = np.ceil(

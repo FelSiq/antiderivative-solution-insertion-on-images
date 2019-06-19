@@ -51,10 +51,8 @@ class Preprocessor:
             3. Otsu threshold
             4. Morphologic binary closing
             5. Image empty border crop
-            6. (Repeat until image size does not change significantly)
-                6.1. Rank 11 median filter, but only removing non-zero values,
-                    i.e., it does not affect pixels with zero value.
-                6.2. Empty border crop
+            6. Rank 3 median filter
+            7. Empty border crop
 
         Arguments
         ---------
@@ -87,18 +85,18 @@ class Preprocessor:
         self.img_preprocessed = (scipy.ndimage.morphology.binary_closing(
             self.img_preprocessed, structure=self._opening_mask_2))
 
-        self.img_preprocessed = (
-            skimage.filters.rank.median(self.img_preprocessed, np.ones((3, 3))))
+        self.img_preprocessed = (skimage.filters.rank.median(
+            self.img_preprocessed, np.ones((3, 3))))
 
-        self.img_preprocessed = Preprocessor.border_crop(
-            self.img_preprocessed)
+        self.img_preprocessed = Preprocessor.border_crop(self.img_preprocessed)
 
         if plot:
             plt.subplot(122)
             plt.imshow(self.img_preprocessed, cmap="gray", vmin=0, vmax=1)
             plt.show()
 
-        self.img_preprocessed = self.img_preprocessed.astype(np.uint8) // self.img_preprocessed.max()
+        self.img_preprocessed = self.img_preprocessed.astype(
+            np.uint8) // self.img_preprocessed.max()
 
         if output_file:
             plt.imsave(output_file, 255 * self.img_preprocessed, cmap="gray")
