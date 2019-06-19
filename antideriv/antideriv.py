@@ -119,10 +119,9 @@ class Antideriv:
 
             cur_x, cur_y = cur_coords
 
-            cur_slice = img[
-                (cur_x - window_size[0]):(cur_x + window_size[0] + 1),
-                (cur_y - window_size[1]):(cur_y + window_size[1] + 1),
-            ]
+            cur_slice = img[(cur_x - window_size[0]):(
+                cur_x + window_size[0] + 1), (cur_y - window_size[1]):(
+                    cur_y + window_size[1] + 1), ]
 
             if cur_slice.size:
                 slice_coords = np.nonzero(cur_slice == obj_color)
@@ -131,9 +130,8 @@ class Antideriv:
                 cur_x -= window_size[0]
                 cur_y -= window_size[1]
 
-                stack.update({
-                    (x + cur_x, y + cur_y) for x, y in zip(*slice_coords)
-                })
+                stack.update({(x + cur_x, y + cur_y)
+                              for x, y in zip(*slice_coords)})
 
         # Get currrent object boundary coordinates
         mask = np.argwhere(img == color)
@@ -217,6 +215,9 @@ class Antideriv:
 
                 color += 1
 
+        if not obj_coords:
+            raise ValueError("No object detected in input image.")
+
         obj_coords = np.array(obj_coords)
 
         # Translate obj_coords to non-padded coordinates
@@ -225,13 +226,13 @@ class Antideriv:
 
         return obj_coords, np.median(sizes)
 
-    def _is_outlier(self,
-                    obj: np.ndarray,
+    def _is_outlier(self, obj: np.ndarray,
                     threshold_val: t.Tuple[np.number, np.number]) -> bool:
-        """Check if given image segment is a possible outlier."""
+        """Check if the given image segment is a possible outlier."""
         return obj.size < threshold_val * 0.15
 
-    def _segment_img(self, whis: np.number = 1.5,
+    def _segment_img(self,
+                     whis: np.number = 1.5,
                      window_size: np.number = 0.025) -> np.ndarray:
         """Segment the input image into preprocessed units.
 
@@ -283,7 +284,9 @@ class Antideriv:
 
                 obj = np.pad(
                     array=obj,
-                    pad_width=np.repeat(np.ceil((45 - np.array(obj.shape)) / 2), repeats=2).astype(int).reshape((2, 2)),
+                    pad_width=np.repeat(
+                        np.ceil((45 - np.array(obj.shape)) / 2),
+                        repeats=2).astype(int).reshape((2, 2)),
                     mode="constant",
                     constant_values=0)[:45, :45]
 
@@ -398,11 +401,28 @@ class Antideriv:
             req_ans = requests.get(url)
             return imageio.imread(io.BytesIO(req_ans.content))
 
-        res = self._wolfram_client.query(expression)
-        ans_plain_text = res["pod"][0]["subpod"]["plaintext"]
-        ans_img_url = res["pod"][0]["subpod"]["img"]["@src"]
+        try:
+            res = self._wolfram_client.query(expression)
 
-        img_sol = get_solution_image(ans_img_url)
+        except Exception as e:
+            raise ConnectionError("Unable to connect to Wolfram Alpha. "
+                                  "Message: {}".format(str(e)))
+
+        try:
+            ans_plain_text = res["pod"][0]["subpod"]["plaintext"]
+            ans_img_url = res["pod"][0]["subpod"]["img"]["@src"]
+
+        except IndexError:
+            raise IndexError("Wolfram Alpha does not returned an integration "
+                             "result. Check your connection and also your "
+                             "preprocessed input image.")
+
+        try:
+            img_sol = get_solution_image(ans_img_url)
+
+        except Exception as e:
+            raise ConnectionError("Unable to get the solution image. "
+                                  "Message: {}".format(str(e)))
 
         return ans_plain_text, img_sol
 
@@ -465,5 +485,5 @@ if __name__ == "__main__":
     img, ans = model.solve(return_text=True, verbose=True)
     print(ans)
 
-    plt.imshow(img)
+    plt.imshow(img, cmap="gray")
     plt.show()
