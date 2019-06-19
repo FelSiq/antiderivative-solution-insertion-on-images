@@ -24,7 +24,7 @@ Here some examples of expected program inputs, at the left side, with the corres
 </p>
 <p>
   <img  src="/sample-inputs/sample-5.jpg" width="400" height="400" />
-  <img src="/sample-outputs/sample-5.jpg" width="400" height="400" />
+  <img src="/sample-outputs/sample-5.png" width="400" height="400" />
 </p>
 <p>
   <img  src="/sample-inputs/sample-6.jpg" width="400" height="400" />

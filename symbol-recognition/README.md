@@ -63,9 +63,7 @@ Finally, is this step, every instance in the "data-augmented" dataset is preproc
 The new data is placed in a new subrepository named "data-augmented-preprocessed."
 
 ## Predictive models using CNN
-The preprocessed data is used to train a CNN classifier model. It was tested 26 different CNN architectures for this task. All tested architectures were kept in the [Symbol recognition module](./symbol_recog.py) for reference.
-
-The results are kept in the [results](./results) subrepository.
+The preprocessed data is used to train a CNN classifier model. It was tested 24 different CNN architectures for this task. All tested architectures were kept in the [Symbol recognition module](./symbol_recog.py) for reference.
 
 The best model (with higher evaluation accuracy) is chosen, and then re-trained with all available data (with validation splits to used early stopping).
 
