@@ -1,8 +1,8 @@
 """Module dedicated to the antiderivative detector."""
 import typing as t
 import io
-import requests
 import re
+import requests
 
 import numpy as np
 import wolframalpha
@@ -12,8 +12,6 @@ import keras
 
 import preprocess
 import postprocess
-
-import matplotlib.pyplot as plt
 
 
 class Antideriv:
@@ -142,17 +140,12 @@ class Antideriv:
 
     def _get_obj_coords(
             self,
-            whis: np.number = 1.5,
             window_size: float = 1.0e-6,
     ) -> t.Tuple[np.ndarray, np.number]:
         """Get coordinates of each object in preprocessed input image.
 
         Parameters
         ----------
-        whis : :obj:`np.number`, optional
-            Number of IQR (interquartile range) from the median to consider
-            some object a noise (outlier).
-
         window_size : :obj:`np.number`, optional
             Size, in proportion to each dimension size of the input image, of
             half the size of the square window to consider as neighborhood for
@@ -229,22 +222,14 @@ class Antideriv:
     def _is_outlier(self, obj: np.ndarray,
                     threshold_val: t.Tuple[np.number, np.number]) -> bool:
         """Check if the given image segment is a possible outlier."""
-        return obj.size < threshold_val * 0.15
+        return obj.size < np.array(threshold_val) * 0.15
 
     def _segment_img(self,
-                     whis: np.number = 1.5,
                      window_size: np.number = 0.025) -> np.ndarray:
         """Segment the input image into preprocessed units.
 
         Parameters
         ---------
-        whis : :obj:`np.number`, optional
-            Number of IQR (interquartile range) lesser the median to consider
-            some object a noise (outlier). Note that greater objects (that
-            could be considered ``outliers`` from above) are not ignored. The
-            purpose of this strategy is to ignore remaining salt and pepper
-            class of noise in the preprocessed input image.
-
         window_size : :obj:`np.number`, optional
             Size, in proportion to each dimension size of the input image, of
             half the size of the square window to consider as neighborhood for
@@ -267,7 +252,7 @@ class Antideriv:
         segments = []  # type: t.Union[t.List[np.ndarray], np.ndarray]
 
         obj_coords, threshold_val = self._get_obj_coords(
-            whis=whis, window_size=window_size)
+            window_size=window_size)
 
         for obj_coord in sorted(obj_coords, key=lambda coord: coord[2]):
             x_min, x_max, y_min, y_max = obj_coord
@@ -302,7 +287,6 @@ class Antideriv:
     def fit(self,
             img: np.ndarray,
             output_file: t.Optional[str] = None,
-            whis: np.number = 1.5,
             window_size: float = 1.0e-6) -> "Antideriv":
         """Fit an input image into the model.
 
@@ -313,11 +297,6 @@ class Antideriv:
 
         output_file : :obj:`str`, optional
             Path of output file to save the preprocessed image.
-
-        whis : :obj:`np.number`, optional
-            Number of IQR (interquartile range) from the median of the object
-            sizes in the input image to consider some object a noise (outlier).
-            In this case, the object will not be inserted in the expression.
 
         window_size : :obj:`np.number`, optional
             Size, in proportion to each dimension size of the input image, of
@@ -333,14 +312,8 @@ class Antideriv:
         -------
         Self
         """
-        if not isinstance(whis, (float, int, np.number)):
-            raise TypeError("'whis' must be a number.")
-
         if not isinstance(window_size, (float, int, np.number)):
             raise TypeError("'window_size' must be a number.")
-
-        if whis <= 0.0:
-            raise ValueError("'Whis' must be a positive real value.")
 
         if not 0.0 < window_size < 1.0:
             raise ValueError("window size must be in (0.0, 1.0) interval, "
@@ -353,7 +326,7 @@ class Antideriv:
         self.img_solved = img.copy()
 
         self.img_segments = self._segment_img(
-            whis=whis, window_size=window_size)
+            window_size=window_size)
 
         return self
 
@@ -379,7 +352,7 @@ class Antideriv:
 
         expression = []  # type: t.List[str]
 
-        for idx, pred in enumerate(preds):
+        for pred in preds:
             # Decreasing fort
             class_ranking = np.argsort(-pred)
 
@@ -404,9 +377,9 @@ class Antideriv:
         try:
             res = self._wolfram_client.query(expression)
 
-        except Exception as e:
+        except Exception as con_err:
             raise ConnectionError("Unable to connect to Wolfram Alpha. "
-                                  "Message: {}".format(str(e)))
+                                  "Message: {}".format(str(con_err)))
 
         try:
             ans_plain_text = res["pod"][0]["subpod"]["plaintext"]
@@ -420,9 +393,9 @@ class Antideriv:
         try:
             img_sol = get_solution_image(ans_img_url)
 
-        except Exception as e:
+        except Exception as con_err:
             raise ConnectionError("Unable to get the solution image. "
-                                  "Message: {}".format(str(e)))
+                                  "Message: {}".format(str(con_err)))
 
         return ans_plain_text, img_sol
 
@@ -473,6 +446,8 @@ class Antideriv:
 if __name__ == "__main__":
     import sys
 
+    import matplotlib.pyplot as plt
+
     if len(sys.argv) <= 1:
         print("usage", sys.argv[0], "<input image>")
         exit(1)
@@ -482,8 +457,8 @@ if __name__ == "__main__":
     input_img = imageio.imread(image_path)
 
     model = Antideriv().fit(input_img, output_file="../preprocessed.png")
-    img, ans = model.solve(return_text=True, verbose=True)
+    output_img, ans = model.solve(return_text=True, verbose=True)
     print(ans)
 
-    plt.imshow(img, cmap="gray")
+    plt.imshow(output_img, cmap="gray")
     plt.show()
