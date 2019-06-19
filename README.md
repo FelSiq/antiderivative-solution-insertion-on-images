@@ -43,6 +43,7 @@ This program is far from perfection. It needs much more training data to improve
 
 # Workflow
 ![Image of the final workflow](/workflow.png)
+<a link="workflow">
 
 The workflow is divided mainly in two parts:
 * Symbol recognition with Convolutional Neural Network (CNN)
@@ -59,7 +60,13 @@ The workflow is divided mainly in two parts:
 Please check the [Symbol recognition subdirecotry README]("/symbol-recognition/README.md") for deeper information about the process symbol recognition process.
 
 ## Antiderivative recognition
-To do.
+After the input image is highly preprocessed (see the [workflow schematic](#workflow)), it is scanned pixel by pixel searching for distinct objects. When an object is found, it is painted (following a algorithm pretty much like a Breadth First Search) and the coordinates of the slice of its boundaries (x and y maximal and minimal) collected.
+
+Then, with the coordinates of each object window, each one is collected and resized to a 45x45 image, mantaining the aspect ratio as much as possible.The frozen CNN model is then feed with these separated objects, transforming they in a raw text expression.
+
+This expression is send to Wolfram Alpha, which returns its solution as an image.
+
+This image is also preprocessed, and finally inserted in the input image.
 
 ### Insertion in-place
 Wolfram Alpha already offers an image of the solution. This image is preprocessed, resized, and inserted in the original input image.
