@@ -385,10 +385,10 @@ class Antideriv:
             ans_plain_text = res["pod"][0]["subpod"]["plaintext"]
             ans_img_url = res["pod"][0]["subpod"]["img"]["@src"]
 
-        except IndexError:
-            raise IndexError("Wolfram Alpha does not returned an integration "
-                             "result. Check your connection and also your "
-                             "preprocessed input image.")
+        except (IndexError, KeyError):
+            raise Exception("Wolfram Alpha does not returned an integration "
+                            "result. Check your connection and also your "
+                            "preprocessed input image.")
 
         try:
             img_sol = get_solution_image(ans_img_url)
@@ -448,8 +448,8 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
 
-    if len(sys.argv) <= 1:
-        print("usage", sys.argv[0], "<input image>")
+    if len(sys.argv) < 2:
+        print("usage", sys.argv[0], "<input image> [output path]")
         exit(1)
 
     image_path = sys.argv[1]
@@ -462,3 +462,7 @@ if __name__ == "__main__":
 
     plt.imshow(output_img, cmap="gray")
     plt.show()
+
+    if len(sys.argv) >= 3:
+        plt.imsave(sys.argv[2], output_img, cmap="gray")
+        print("Saved output image in '{}' path.".format(sys.argv[2]))
