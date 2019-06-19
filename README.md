@@ -13,10 +13,32 @@ The premise is to identify antiderivatives (because proper integrals seems to be
 - Digit and Operator recognition
 
 # Sample inputs
-Here some examples of expected program inputs.
+Here some examples of expected program inputs, at the left side, with the corresponding program output, at the right side.
 <p>
-  <img src="/sample-inputs/sample-4.jpg" width="400" height="400" />
-  <img src="/sample-inputs/sample-5.jpg" width="400" height="400" />
+  <img  src="/sample-inputs/sample-1.jpg" width="400" height="400" />
+  <img src="/sample-outputs/sample-1.png" width="400" height="400" />
+</p>
+<p>
+  <img  src="/sample-inputs/sample-2.jpg" width="400" height="400" />
+  <img src="/sample-outputs/sample-2.png" width="400" height="400" />
+</p>
+<p>
+  <img  src="/sample-inputs/sample-5.jpg" width="400" height="400" />
+  <img src="/sample-outputs/sample-5.jpg" width="400" height="400" />
+</p>
+<p>
+  <img  src="/sample-inputs/sample-6.jpg" width="400" height="400" />
+  <img src="/sample-outputs/sample-6.png" width="400" height="400" />
+</p>
+
+This program is far from perfection. It needs much more training data to improve its performance. Here is some examples where things simply does not work fine.
+<p>
+  <img  src="/sample-inputs/sample-3.jpg" width="400" height="400" />
+  <img src="/sample-outputs/sample-3.png" width="400" height="400" />
+</p>
+<p>
+  <img  src="/sample-inputs/sample-4.jpg" width="400" height="400" />
+  <img src="/sample-outputs/sample-4.png" width="400" height="400" />
 </p>
 
 # Workflow
@@ -30,7 +52,7 @@ The workflow is divided mainly in two parts:
 * Antiderivative recognition and insertion in-place
     1. Input must be preprocessed and segmented
     2. Objects must be detected and parsed
-    3. Object recognition (uses the previous descibred part) and expression generation
+    3. Object recognition (uses the previous described part) and expression generation
     4. Solve the expression and insertion in-place
 
 ## Symbol recognition
