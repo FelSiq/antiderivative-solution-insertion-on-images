@@ -1,6 +1,6 @@
 # Symbol recognition subdirectory
 
-This subdirectory is dedicated to all structure related to symbol recoginition. Its purpose is to preprocess the input data and create an adequate classifier model using Convolutional Neural Network (CNN).
+This subdirectory is dedicated to all structure related to symbol recognition. Its purpose is to preprocess the input data and create an adequate classifier model using Convolutional Neural Network (CNN).
 
 - If you're interested in the steps taken until the construction of the used classifier model in the Antideriv module, continue reading this README.
 - If you're interested in the used data in this subrepository, just download the "data-original.zip" file. This file is a subset of the original data whose source URL can be found in the [Data source](#data-source) section.
@@ -46,7 +46,7 @@ These scripts must be executed in exactly this order to everything works fine.
 ### Data balancing:
 The original dataset (data-original.zip) was highly unbalanced. For that matter, it is balanced before anything else. The strategy adopted combines both undersampling and oversampling techniques.
 
-First, the trimmed mean (cut-off of 10% in both extremes) of class sizes, T, is calculated. Then, a new dataset is created were every possible class have exactly T instances.
+First, the mean of class sizes, T, is calculated. Then, a new dataset is created were every possible class have exactly T instances.
 
 Obviously, all classes that has more than T instances are undersampled (T instances are picked randomly and uniformly), and all classes which size is under T are oversampled (again, instances are chosen randomly and uniformly to be replicated).
 
@@ -67,10 +67,11 @@ Finally, is this step, every instance in the "data-augmented" dataset is preproc
 1. RGB to Grayscale
 2. Mean thresholding
 3. Padding of size 4 for all borders (filling with zeros the new pixels)
-4. Local mean thresholding with 2x2 filter
-5. All [preprocessing applied to a input image](/README.md#workflow.png)
-6. Resize to 45x45 image using interpolation of third order and without anti-aliasing
-7. Mean thresholding (once again), to remove resizing noise
+4. Binary dilation (morphology) with square mask of size length 3 (connectivity 2)
+5. Local mean thresholding with 2x2 filter
+6. All [preprocessing applied to a input image](/README.md#workflow.png)
+7. Resize to 45x45 image using interpolation of third order and without anti-aliasing
+8. Mean thresholding (once again), to remove resizing noise
 
 The new data is placed in a new subrepository named "data-augmented-preprocessed."
 
@@ -82,4 +83,6 @@ The best model (with higher evaluation accuracy) is chosen, and then re-trained 
 Lastly, the trained chosen model is frozen and copied to the Antideriv module.
 
 ## Data source
-I do not own the used dataset. The data was retireved from "[Handwritten math symbols dataset](https://www.kaggle.com/xainano/handwrittenmathsymbols)."
+I do not own the used datasets.
+
+The data was retireved both from "[Handwritten math symbols dataset](https://www.kaggle.com/xainano/handwrittenmathsymbols)" and from "[HASYv2 - Handwritten Symbol database](https://zenodo.org/record/259444#.XQxXsiZrzeQ)."

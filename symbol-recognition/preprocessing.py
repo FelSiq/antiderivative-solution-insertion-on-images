@@ -38,6 +38,7 @@ def preprocess_img(img: np.ndarray) -> np.ndarray:
 
     img = img < img.mean()
     img = np.pad(img, 4, mode="constant", constant_values=0)
+    img = skimage.morphology.binary_dilation(img, selem=np.ones((3, 3)))
     img = skimage.filters.rank.mean(img, selem=np.ones((2, 2)))
 
     # Preprocess the image the same way as a regular Antideriv input
