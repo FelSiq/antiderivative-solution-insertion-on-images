@@ -41,6 +41,7 @@ class Preprocessor:
 
     def preprocess(self,
                    img: np.ndarray,
+                   crop_borders: bool = False,
                    plot: bool = False,
                    output_file: t.Optional[str] = None) -> np.ndarray:
         """Preprocess the input image.
@@ -58,6 +59,10 @@ class Preprocessor:
         ---------
         img : :obj:`np.ndarray`
             Image to be processed.
+
+        crop_borders : :obj:`bool`, optional
+            If True, remove empty borders of the image, reducing its
+            dimensions.
 
         plot : :obj:`bool`, optional
             If True, plot the final preprocessed image.
@@ -88,7 +93,9 @@ class Preprocessor:
         self.img_preprocessed = (skimage.filters.rank.median(
             self.img_preprocessed, np.ones((3, 3))))
 
-        self.img_preprocessed = Preprocessor.border_crop(self.img_preprocessed)
+        if crop_borders:
+            self.img_preprocessed = (
+                Preprocessor.border_crop(self.img_preprocessed))
 
         if plot:
             plt.subplot(122)
