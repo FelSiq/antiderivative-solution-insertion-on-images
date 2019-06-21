@@ -9,16 +9,27 @@ This subdirectory is dedicated to all structure related to symbol recoginition. 
 It is used Python 3. This module will not work with Python 2.
 
 First, install this subdirectory required python packages.
-`
+
+```
 pip install -Ur requirements
-`
+```
 
-Then, you can execute all step at once with the simple command just below.
-`
+Then, you can execute all steps at once with the following command:
+
+```
 python runall.py
-`
+```
 
-The [runall.py](./runall.py) script will execute all steps at once (described in the section [Data processing pipeline](#data-processing-pipeline)), in the correct order.
+The [runall.py](./runall.py) script will execute all steps at once (described in the section [Data processing pipeline](#data-processing-pipeline)), in the correct order. You can also give to it some command line arguments to skip some steps.
+1. "b": skip data dalancing
+2. "a": skip data augmentation, and also the previous step
+3. "p": skip data preprocessing, and also all previous steps
+
+For example, the following code executes only the data preprocessing and model training steps.
+
+```
+python runall.py a
+```
 
 You can also run each script separately, if the supposed script order is kept correctly.
 
@@ -55,10 +66,11 @@ Finally, is this step, every instance in the "data-augmented" dataset is preproc
 
 1. RGB to Grayscale
 2. Mean thresholding
-3. Binary dilation (morphology)
-4. Empty border crop
-5. Resize to 45x45 image using interpolation of third order and without anti-aliasing
-6. Mean thresholding (once again)
+3. Padding of size 4 for all borders (filling with zeros the new pixels)
+4. Local mean thresholding with 2x2 filter
+5. All [preprocessing applied to a input image](/README.md#workflow.png)
+6. Resize to 45x45 image using interpolation of third order and without anti-aliasing
+7. Mean thresholding (once again), to remove resizing noise
 
 The new data is placed in a new subrepository named "data-augmented-preprocessed."
 
