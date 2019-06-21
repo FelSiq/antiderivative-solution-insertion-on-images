@@ -504,6 +504,61 @@ class Architectures:
         self.model.add(BatchNormalization())
         self.model.add(Dense(units=self.num_classes, activation="softmax"))
 
+    def architecture_25(self):
+        """Predefined CNN architecture 25.
+
+        Note: direct variant of the architecture 03.
+        """
+        self.model.add(Conv2D(filters=32, kernel_size=3, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(Conv2D(filters=48, kernel_size=3, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(Conv2D(filters=64, kernel_size=3, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+
+        self.model.add(Conv2D(filters=8, kernel_size=1, activation="relu"))
+
+        self.model.add(Flatten())
+        self.model.add(Dense(units=128, activation="relu"))
+        self.model.add(Dense(units=self.num_classes, activation="softmax"))
+
+    def architecture_26(self):
+        """Predefined CNN architecture 26.
+
+        Note: direct variant of the architecture 03.
+        """
+        self.model.add(Conv2D(filters=32, kernel_size=3, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(Conv2D(filters=48, kernel_size=3, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(Conv2D(filters=64, kernel_size=3, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+
+        self.model.add(Conv2D(filters=16, kernel_size=1, activation="relu"))
+
+        self.model.add(Flatten())
+        self.model.add(Dense(units=96, activation="relu"))
+        self.model.add(Dense(units=48, activation="relu"))
+        self.model.add(Dense(units=self.num_classes, activation="softmax"))
+
+    def architecture_27(self):
+        """Predefined CNN architecture 27.
+
+        Note: direct variant of the architecture 03.
+        """
+        self.model.add(Conv2D(filters=32, kernel_size=3, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(Conv2D(filters=48, kernel_size=3, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(Conv2D(filters=64, kernel_size=3, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+
+        self.model.add(Conv2D(filters=16, kernel_size=1, activation="relu"))
+
+        self.model.add(Flatten())
+        self.model.add(Dense(units=128, activation="relu"))
+        self.model.add(Dense(units=self.num_classes, activation="softmax"))
+
 
 class CNNModel(Architectures):
     def __init__(self, random_seed: int, num_classes: int):
@@ -512,7 +567,7 @@ class CNNModel(Architectures):
         self.random_seed = random_seed
         self.architecture_id = None
 
-        self.num_classes = np.unique(y).size
+        self.num_classes = num_classes
 
         aux = tuple(
             mtd_item for mtd_item in inspect.getmembers(
@@ -634,6 +689,9 @@ def get_data(filepath: str) -> t.Tuple[np.ndarray, np.ndarray]:
         class_name = re_class_name.search(root).group()
         new_insts = []
 
+        print(" Reading class {} ({} instances)"
+              "".format(class_name, len(files)))
+
         for filename in sorted(files):
             new_insts.append(skimage.io.imread(os.path.join(root, filename)))
 
@@ -645,6 +703,64 @@ def get_data(filepath: str) -> t.Tuple[np.ndarray, np.ndarray]:
     return X.reshape(*X.shape, 1), y
 
 
+def train_models(ids: t.Sequence[int]) -> None:
+    """Train given architectures and save trained models."""
+    for i in ids:
+        model.init_architecture(
+            architecture_id=i,
+            loss="categorical_crossentropy",
+            optimizer="adam",
+            metrics=["acc"])
+
+        es = keras.callbacks.EarlyStopping(
+            monitor="val_acc",
+            mode="max",
+            min_delta=0.0005,
+            restore_best_weights=True,
+            patience=3)
+
+        X_train, X_val, y_train, y_val = (
+            sklearn.model_selection.train_test_split(
+                X,
+                y,
+                test_size=0.1,
+                shuffle=True,
+                stratify=y,
+                random_state=1234))
+
+        y_train = keras.utils.to_categorical(y_train, model.num_classes)
+        y_val = keras.utils.to_categorical(y_val, model.num_classes)
+
+        model.model.fit(
+            x=X_train,
+            y=y_train,
+            validation_data=(X_val, y_val),
+            epochs=35,
+            batch_size=128,
+            callbacks=[es],
+            verbose=1)
+
+        model.freeze_architecture("./frozen_models")
+
+        # Test model
+        X_train, X_val, y_train, y_val = (
+            sklearn.model_selection.train_test_split(
+                X,
+                y,
+                test_size=0.1,
+                shuffle=True,
+                stratify=y,
+                random_state=1234))
+
+        y_train = keras.utils.to_categorical(y_train, model.num_classes)
+        y_val = keras.utils.to_categorical(y_val, model.num_classes)
+
+        frozen_model = keras.models.load_model(
+            "./frozen_models/model_{}.h5".format(i))
+        res = frozen_model.evaluate(X_train, y_train)
+        print(res)
+
+
 if __name__ == "__main__":
     print("Getting data...")
     X, y = get_data("./data-augmented-preprocessed")
@@ -654,10 +770,10 @@ if __name__ == "__main__":
 
     model = CNNModel(random_seed=1234, num_classes=np.unique(y).size)
 
-    results = {}
-
+    train_models([3, 16, 25, 26, 27])
     """
     # Get the performance of all architectures
+    results = {}
 
     print("Testing architectures...")
     for architecture_id in np.arange(1, model.arch_num + 1):
@@ -687,54 +803,3 @@ if __name__ == "__main__":
         print("Architecture {} mean results:".format(architecture_id),
               cur_results.mean(axis=0))
     """
-    # Get the best model (in this case, architecture #16)
-    model.init_architecture(
-        architecture_id=16,
-        loss="categorical_crossentropy",
-        optimizer="adam",
-        metrics=["acc"])
-
-    es = keras.callbacks.EarlyStopping(
-        monitor="val_acc",
-        mode="max",
-        min_delta=0.01,
-        restore_best_weights=True,
-        patience=5)
-
-    X_train, X_val, y_train, y_val = sklearn.model_selection.train_test_split(
-        X,
-        y,
-        test_size=0.1,
-        shuffle=True,
-        stratify=y,
-        random_state=1234)
-
-    y_train = keras.utils.to_categorical(y_train, model.num_classes)
-    y_val = keras.utils.to_categorical(y_val, model.num_classes)
-
-    model.model.fit(
-        x=X_train,
-        y=y_train,
-        validation_data=(X_val, y_val),
-        epochs=35,
-        batch_size=64,
-        callbacks=[es],
-        verbose=1)
-
-    model.freeze_architecture("./frozen_models")
-
-    # Test the best model (architecture 16)
-    X_train, X_val, y_train, y_val = sklearn.model_selection.train_test_split(
-        X,
-        y,
-        test_size=0.1,
-        shuffle=True,
-        stratify=y,
-        random_state=1234)
-
-    y_train = keras.utils.to_categorical(y_train, model.num_classes)
-    y_val = keras.utils.to_categorical(y_val, model.num_classes)
-
-    model = keras.models.load_model("./frozen_models/model_16.h5")
-    res = model.evaluate(X_train, y_train)
-    print(res)

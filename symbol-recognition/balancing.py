@@ -17,6 +17,7 @@ import numpy as np
 
 OUTPUT_PATH = "./data-balanced"
 RE_CLASS_NAME = re.compile(r"(?<=class_)[^_]+")
+RE_OUTPUT_FORMAT = re.compile(r"(?<=\.).+$")
 
 
 def undersampling(class_path: str, inst_names: t.Iterable[str],
@@ -29,7 +30,10 @@ def undersampling(class_path: str, inst_names: t.Iterable[str],
 
     for new_inst_ind, ind in enumerate(chosen_ind):
         chosen_inst = os.path.join(class_path, inst_names[ind])
-        inst_out_name = "_".join((class_name, str(new_inst_ind)))
+        output_format = RE_OUTPUT_FORMAT.search(inst_names[ind]).group()
+
+        inst_out_name = ".".join(
+            ("_".join((class_name, str(ind))), output_format))
 
         shutil.copy(chosen_inst, os.path.join(outpath, inst_out_name))
 
@@ -39,9 +43,13 @@ def oversampling(class_path: str, inst_names: t.Iterable[str], class_name: str,
                  outpath: str) -> None:
     """Choose random instances of given class and copy to output path."""
     # First, copy all original images to the output path
-    for inst in inst_names:
+    for idx, inst in enumerate(inst_names):
         chosen_inst = os.path.join(class_path, inst)
-        shutil.copy(chosen_inst, outpath)
+        output_format = RE_OUTPUT_FORMAT.search(inst).group()
+
+        shutil.copy(
+            chosen_inst, os.path.join(
+                outpath, "{}_{}.{}".format(class_name, idx, output_format)))
 
     # Then, oversampling randomly and uniformly
     class_size = len(inst_names)
@@ -52,7 +60,11 @@ def oversampling(class_path: str, inst_names: t.Iterable[str], class_name: str,
 
     for new_inst_ind, ind in enumerate(chosen_ind):
         chosen_inst = os.path.join(class_path, inst_names[ind])
-        inst_out_name = "_".join((class_name, str(new_inst_ind)))
+        output_format = RE_OUTPUT_FORMAT.search(inst_names[ind]).group()
+
+        inst_out_name = ".".join(
+            ("_".join((class_name, str(ind), str(new_inst_ind))),
+             output_format))
 
         shutil.copy(chosen_inst, os.path.join(outpath, inst_out_name))
 
@@ -67,6 +79,9 @@ def read_class_data(class_path: str, inst_names: t.Iterable[str],
         os.makedirs(CLASS_FILEPATH)
 
     class_size = len(inst_names)
+
+    print(" Balancing class {} (size of {})..."
+          "".format(CLASS_NAME, class_size))
 
     if class_size > trimmed_class_size:
         chosen_method = undersampling
@@ -99,7 +114,7 @@ def class_trimmed_mean_size(dataset_path: str, cutoff: float = 0.1) -> int:
 
 
 def balance_classes(dataset_path: str, random_seed: int,
-                    cutoff: float = 0.10) -> None:
+                    cutoff: float = 0.0) -> None:
     """Create a new directory with all classes balanced.
 
     The strategy adopted is a mix of undersampling and
@@ -113,6 +128,9 @@ def balance_classes(dataset_path: str, random_seed: int,
 
     trimmed_class_size = class_trimmed_mean_size(
         dataset_path=dataset_path, cutoff=cutoff)
+
+    print(" Balancing - trimmed_class_size (cut-off: {0}): {1}"
+          "".format(cutoff, trimmed_class_size))
 
     for dirpath, _, filenames in file_tree:
         read_class_data(
