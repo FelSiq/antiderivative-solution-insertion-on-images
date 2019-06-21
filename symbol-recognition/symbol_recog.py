@@ -643,7 +643,7 @@ class CNNModel(Architectures):
             y_test = keras.utils.to_categorical(y_test, self.num_classes)
             y_val = keras.utils.to_categorical(y_val, self.num_classes)
 
-            model.init_architecture(
+            self.init_architecture(
                 architecture_id=architecture_id,
                 loss="categorical_crossentropy",
                 optimizer="adam",
@@ -703,8 +703,10 @@ def get_data(filepath: str) -> t.Tuple[np.ndarray, np.ndarray]:
     return X.reshape(*X.shape, 1), y
 
 
-def train_models(ids: t.Sequence[int]) -> None:
+def train_models(ids: t.Sequence[int], X: np.ndarray, y: np.ndarray) -> None:
     """Train given architectures and save trained models."""
+    model = CNNModel(random_seed=1234, num_classes=np.unique(y).size)
+
     for i in ids:
         model.init_architecture(
             architecture_id=i,
@@ -763,14 +765,13 @@ def train_models(ids: t.Sequence[int]) -> None:
 
 if __name__ == "__main__":
     print("Getting data...")
-    X, y = get_data("./data-augmented-preprocessed")
-    print("Ok.")
 
+    X, y = get_data("./data-augmented-preprocessed")
     y = sklearn.preprocessing.LabelEncoder().fit_transform(y)
 
-    model = CNNModel(random_seed=1234, num_classes=np.unique(y).size)
+    print("Ok.")
 
-    train_models([3, 16, 25, 26, 27])
+    train_models([3, 16, 25, 26, 27], X=X, y=y)
     """
     # Get the performance of all architectures
     results = {}

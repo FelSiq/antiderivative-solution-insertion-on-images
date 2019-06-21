@@ -2,7 +2,6 @@
 import sys
 
 import sklearn
-import numpy as np
 
 import balancing
 import augmentation
@@ -35,13 +34,12 @@ if __name__ == "__main__":
         print("Skipped data preprocessing.")
 
     print("Getting data...")
+
     X, y = symbol_recog.get_data("./data-augmented-preprocessed")
+    y = sklearn.preprocessing.LabelEncoder().fit_transform(y)
+
     print("Got all data (total of {} instances).".format(y.shape[0]))
 
-    y = sklearn.preprocessing.LabelEncoder().fit_transform(y)
-    model = symbol_recog.CNNModel(
-        random_seed=1234,
-        num_classes=np.unique(y).size)
     symbol_recog.train_models([3, 16, 25, 26, 27])
 
     print("Process finished.")
