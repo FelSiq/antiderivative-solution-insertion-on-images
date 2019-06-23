@@ -69,18 +69,18 @@ Finally, is this step, every instance in the "data-augmented" dataset is preproc
 3. Padding of size 4 for all borders (filling with zeros the new pixels)
 4. Binary dilation (morphology) with square mask of size length 3 (connectivity 2)
 5. Local mean thresholding with 2x2 filter
-6. All [preprocessing applied to a input image](/README.md#workflow.png)
+6. All [preprocessing applied to an input image](/README.md#workflow.png)
 7. Resize to 45x45 image using interpolation of third order and without anti-aliasing
 8. Mean thresholding (once again), to remove resizing noise
 
 The new data is placed in a new subrepository named "data-augmented-preprocessed."
 
 ## Predictive models using CNN
-The preprocessed data is used to train a CNN classifier model. It was tested 24 different CNN architectures for this task. All tested architectures were kept in the [Symbol recognition module](./symbol_recog.py) for reference.
+The preprocessed data is used to train CNN classifier models. It was tested 27 different CNN architectures for this task. All tested architectures were kept in the [Symbol recognition module](./symbol_recog.py) for reference.
 
-The best model (with higher evaluation accuracy) is chosen, and then re-trained with all available data (with validation splits to used early stopping).
+Some models are chosen, and then re-trained with all available data (with validation splits to used early stopping).
 
-Lastly, the trained chosen model is frozen and copied to the Antideriv module.
+Lastly, all trained chosen models are frozen and copied to the Antideriv module to form a predictive committee.
 
 ## Data source
 I do not own the used datasets.
