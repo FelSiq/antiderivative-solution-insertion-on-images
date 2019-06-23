@@ -2,6 +2,7 @@
 import typing as t
 import io
 import re
+import os
 import requests
 
 import numpy as np
@@ -26,7 +27,7 @@ class Antideriv:
         self.img_solved = None  # type: t.Optional[np.ndarray]
         self.img_segments = None  # type: t.Optional[t.Sequence[np.ndarray]]
 
-        self.model = keras.models.load_model("model_16.h5")
+        self.models = self._load_models(path="./models")
 
         self._preprocessor = preprocess.Preprocessor()
         self._postprocessor = postprocess.Postprocessor()
@@ -57,6 +58,21 @@ class Antideriv:
         )
 
         self._RE_FIX_DNOTATION = re.compile(r"(?<=d)\s+(?=.)")
+
+    def _load_models(self, path: str) -> t.Tuple:
+        """Load CNN trained models."""
+        models_path = (
+            model_name
+            for model_name in os.listdir(path)
+            if model_name.endswith(".h5")
+        )
+
+        loaded_models = (
+            keras.models.load_model(os.path.join(path, model))
+            for model in models_path
+        )
+
+        return tuple(loaded_models)
 
     def _paint_object(
             self,
@@ -330,15 +346,8 @@ class Antideriv:
 
         return self
 
-    def _get_expression(self, threshold: float = 0.0) -> str:
+    def _get_expression(self) -> str:
         """Get expression from preprocessed input image using CNN.
-
-        Paramters
-        ---------
-        threshold : :obj:`float`, optional
-            Minimum difference of percentage between the most probable
-            class and the second most probable one to allow the object
-            be inserted in the final expression.
 
         Returns
         -------
@@ -348,21 +357,18 @@ class Antideriv:
         if self.img_segments is None:
             raise TypeError("No input image fitted in model.")
 
-        preds = self.model.predict(self.img_segments, verbose=0)
+        scores = np.zeros((len(self.img_segments), len(self._CLASS_SYMBOL)))
 
-        expression = []  # type: t.List[str]
+        for model in self.models:
+            preds = model.predict(self.img_segments, verbose=0).argmax(axis=1)
 
-        for pred in preds:
-            # Decreasing fort
-            class_ranking = np.argsort(-pred)
+            for seg_idx, pred_idx in enumerate(preds):
+                scores[seg_idx, pred_idx] += 1
 
-            # Calculate the difference between the percentage of the most
-            # probable and second most probable classes
-            certainty = np.abs(np.subtract(*pred[class_ranking <= 1]))
-
-            if certainty >= threshold:
-                most_prob_class = self._CLASS_SYMBOL[pred.argmax()]
-                expression.append(most_prob_class)
+        expression = [
+            self._CLASS_SYMBOL[seg_score]
+            for seg_score in scores.argmax(axis=1)
+        ]
 
         return self._RE_FIX_DNOTATION.sub("", " ".join(expression))
 
