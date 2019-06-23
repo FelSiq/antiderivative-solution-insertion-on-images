@@ -16,15 +16,16 @@ class Postprocessor:
 
     def _preprocess_solution(self,
                              img: np.ndarray,
-                             output_shape: t.Tuple[int, int],
+                             scale: float,
                              ) -> np.ndarray:
         """Preprocess the solution image given by Wolfram Alpha."""
 
-        img = skimage.transform.resize(
+        img = skimage.transform.rescale(
             image=img,
+            scale=scale,
             order=3,
             anti_aliasing=False,
-            output_shape=output_shape)
+            multichannel=False)
 
         img = np.pad(img, pad_width=3, mode="constant", constant_values=0)
 
@@ -36,7 +37,7 @@ class Postprocessor:
             self,
             img_base: np.ndarray,
             img_sol: np.ndarray,
-            sol_prop_size: t.Tuple[float, float] = (0.15, 0.80),
+            sol_prop_size: float = 0.20,
             sol_prop_local: t.Tuple[np.number, np.number] = (0.80, 0.50),
             ) -> np.ndarray:
         """Process the solution image and insert it to the ``img_base``.
@@ -49,9 +50,9 @@ class Postprocessor:
         img_sol : :obj:`np.ndarray`
             Image of the integration solution of the input image.
 
-        sol_prop_size : :obj:`tuple` with two :obj:`float`, optional
-            Tuple containing the proportion of space which the ``img_sol``
-            must take from the ``img_base`` at each axis.
+        sol_prop_size : :obj:`float`, optional
+            Proportion of space which the ``img_sol`` must take from
+            the ``img_base`` based on axis 0 (rows).
 
         sol_prop_local : :obj:`tuple` with two :obj:`float`, optional
             Tuple containing the proportion of ``img_base`` where the
@@ -64,12 +65,9 @@ class Postprocessor:
         """
         img_base = skimage.color.rgb2gray(img_base)
 
-        output_shape = np.ceil(
-            sol_prop_size * np.array(img_base.shape)).astype(int)
-
         img_sol = self._preprocess_solution(
             img=img_sol,
-            output_shape=output_shape)
+            scale=(img_base.shape[0] * sol_prop_size) / img_sol.shape[0])
 
         sol_x, sol_y = (np.array(img_base.shape) * sol_prop_local
                         - np.array(img_sol.shape) // 2).astype(int)
