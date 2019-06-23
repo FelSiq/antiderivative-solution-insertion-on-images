@@ -231,12 +231,11 @@ class Antideriv:
         obj_coords[:, :2] -= pad_width[0]
         obj_coords[:, 2:] -= pad_width[1]
 
-        return obj_coords, np.median(sizes)
+        return obj_coords, np.percentile(sizes, 75)
 
-    def _is_outlier(self, obj: np.ndarray,
-                    threshold_val: t.Tuple[np.number, np.number]) -> bool:
+    def _is_outlier(self, obj: np.ndarray, threshold_val: np.number) -> bool:
         """Check if the given image segment is a possible outlier."""
-        return obj.size < np.array(threshold_val) * 0.15
+        return obj.size < (threshold_val * 0.15)
 
     def _segment_img(self, window_size: np.number = 0.025) -> np.ndarray:
         """Segment the input image into preprocessed units.
@@ -365,6 +364,10 @@ class Antideriv:
             self._CLASS_SYMBOL[seg_score]
             for seg_score in scores.argmax(axis=1)
         ]
+
+        # Avoid known common mistakes
+        if expression[0] in {"1", "/"}:
+            expression[0] = "integrate"
 
         return self._RE_FIX_DNOTATION.sub("", " ".join(expression))
 
