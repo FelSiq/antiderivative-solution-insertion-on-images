@@ -27,7 +27,10 @@ class Antideriv:
         self.img_solved = None  # type: t.Optional[np.ndarray]
         self.img_segments = None  # type: t.Optional[t.Sequence[np.ndarray]]
 
-        self.models = self._load_models(path="./models")
+        self.models = self._load_models(
+            path=os.path.join(
+                os.path.realpath(__file__)[:-len(os.path.basename(__file__))],
+                "models"))
 
         self._preprocessor = preprocess.Preprocessor()
         self._postprocessor = postprocess.Postprocessor()
@@ -61,16 +64,11 @@ class Antideriv:
 
     def _load_models(self, path: str) -> t.Tuple:
         """Load CNN trained models."""
-        models_path = (
-            model_name
-            for model_name in os.listdir(path)
-            if model_name.endswith(".h5")
-        )
+        models_path = (model_name for model_name in os.listdir(path)
+                       if model_name.endswith(".h5"))
 
-        loaded_models = (
-            keras.models.load_model(os.path.join(path, model))
-            for model in models_path
-        )
+        loaded_models = (keras.models.load_model(os.path.join(path, model))
+                         for model in models_path)
 
         return tuple(loaded_models)
 
@@ -240,8 +238,7 @@ class Antideriv:
         """Check if the given image segment is a possible outlier."""
         return obj.size < np.array(threshold_val) * 0.15
 
-    def _segment_img(self,
-                     window_size: np.number = 0.025) -> np.ndarray:
+    def _segment_img(self, window_size: np.number = 0.025) -> np.ndarray:
         """Segment the input image into preprocessed units.
 
         Parameters
@@ -341,8 +338,7 @@ class Antideriv:
         # Keep original image copy to produce the output later
         self.img_solved = img.copy()
 
-        self.img_segments = self._segment_img(
-            window_size=window_size)
+        self.img_segments = self._segment_img(window_size=window_size)
 
         return self
 

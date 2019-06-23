@@ -94,8 +94,8 @@ class Preprocessor:
             self.img_preprocessed, np.ones((3, 3))))
 
         if crop_borders:
-            self.img_preprocessed = (
-                Preprocessor.border_crop(self.img_preprocessed))
+            self.img_preprocessed = (Preprocessor.border_crop(
+                self.img_preprocessed))
 
         if plot:
             plt.subplot(122)

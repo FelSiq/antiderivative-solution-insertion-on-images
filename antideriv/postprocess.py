@@ -8,16 +8,18 @@ import skimage.color
 
 class Postprocessor:
     """Class with various methods for postprocessing the input image."""
+
     def __init__(self):
         """."""
         self.img_postprocessed = None  # type: t.Optional[np.ndarray]
 
         self._dilation_mask = np.ones((3, 3))
 
-    def _preprocess_solution(self,
-                             img: np.ndarray,
-                             scale: float,
-                             ) -> np.ndarray:
+    def _preprocess_solution(
+            self,
+            img: np.ndarray,
+            scale: float,
+    ) -> np.ndarray:
         """Preprocess the solution image given by Wolfram Alpha."""
 
         img = skimage.transform.rescale(
@@ -39,7 +41,7 @@ class Postprocessor:
             img_sol: np.ndarray,
             sol_prop_size: float = 0.20,
             sol_prop_local: t.Tuple[np.number, np.number] = (0.80, 0.50),
-            ) -> np.ndarray:
+    ) -> np.ndarray:
         """Process the solution image and insert it to the ``img_base``.
 
         Arguments
@@ -69,13 +71,11 @@ class Postprocessor:
             img=img_sol,
             scale=(img_base.shape[0] * sol_prop_size) / img_sol.shape[0])
 
-        sol_x, sol_y = (np.array(img_base.shape) * sol_prop_local
-                        - np.array(img_sol.shape) // 2).astype(int)
+        sol_x, sol_y = (np.array(img_base.shape) * sol_prop_local -
+                        np.array(img_sol.shape) // 2).astype(int)
 
-        img_base_slice = img_base[
-            sol_x:(sol_x+img_sol.shape[0]+1),
-            sol_y:(sol_y+img_sol.shape[1]+1),
-        ]
+        img_base_slice = img_base[sol_x:(sol_x + img_sol.shape[0] + 1), sol_y:(
+            sol_y + img_sol.shape[1] + 1), ]
 
         img_base_slice[np.nonzero(img_sol)] = img_base.min()
 
